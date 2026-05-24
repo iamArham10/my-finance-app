@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Kharcha — Personal Finance Tracker
+
+Kharcha is a modern, responsive personal finance tracker built with Next.js, Supabase, and Tailwind CSS. It helps you track expenses across different folders/categories, monitor your budgets, and gain insights into your spending habits.
+
+## Features
+
+- **Auth**: Secure email/password authentication using Supabase.
+- **Folders & Budgets**: Create categories with emojis and optional monthly budget limits.
+- **Items Tracking**: Log expenses with custom units, quantities, and dates.
+- **Dashboard Summary**: Get a bird's eye view of your spending, active folders, and budget alerts.
+- **Analytics**: Visualize your spending with Donut and Bar charts, tracking month-over-month trends.
+- **Dark Mode**: Beautiful, responsive design with fully supported light and dark themes.
+
+## Tech Stack
+
+- **Framework:** [Next.js 14](https://nextjs.org/) (App Router)
+- **Styling:** [Tailwind CSS v4](https://tailwindcss.com/) & CSS Variables
+- **UI Components:** Custom components + [shadcn/ui](https://ui.shadcn.com/) primitives
+- **Icons:** [Lucide React](https://lucide.dev/)
+- **Charts:** [Recharts](https://recharts.org/)
+- **Database & Auth:** [Supabase](https://supabase.com/)
+- **Fonts:** Geist & Geist Mono
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+- Node.js (v18 or higher)
+- A [Supabase](https://supabase.com/) account and project.
+
+### Environment Setup
+
+1. Copy the example environment file (if available) or create one:
+   ```bash
+   touch .env.local
+   ```
+2. Fill in your Supabase project URL and anon key in `.env.local`:
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=your_project_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+   ```
+
+### Installation
+
+```bash
+npm install
+```
+
+### Running the App
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Database Schema (Supabase)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The app requires two main tables in Supabase:
+- `folders`: Stores categories (id, user_id, name, icon, budget_limit, created_at).
+- `items`: Stores expenses (id, folder_id, user_id, name, price, quantity, unit, total, date, note, created_at).
 
-## Learn More
+Ensure Row Level Security (RLS) is enabled so users can only access their own data.
 
-To learn more about Next.js, take a look at the following resources:
+## Deployment
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This app is ready to be deployed to [Vercel](https://vercel.com). Just connect your repository and add the `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` to the environment variables in your Vercel project settings.

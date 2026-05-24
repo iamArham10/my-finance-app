@@ -1,26 +1,227 @@
 @import "tailwindcss";
 
+/*
+ * DESIGN SYSTEM — Kharcha Finance Tracker
+ * BASE GRID: 8px
+ * Card padding:       24px  (p-6)
+ * Section gap:        32px  (gap-8)
+ * Page max-width:     1100px
+ * Page x-padding:     24px  (mobile: 16px)
+ * Card border-radius: 12px  (rounded-xl)
+ * Input height:       40px  (h-10)
+ * Button height:      36px  (h-9)
+ * Badge radius:       999px (rounded-full)
+ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg-page:           #f6f7f5;
+  --bg-surface:        #ffffff;
+  --bg-elevated:       #f0f2ef;
+  --bg-subtle:         #e8ebe6;
+
+  --border:            #d6dbd3;
+  --border-focus:      #3d7a4f;
+
+  --text-primary:      #0f1a13;
+  --text-secondary:    #5a6b5e;
+  --text-muted:        #8fa395;
+
+  --accent:            #2d6a4f;
+  --accent-hover:      #245c43;
+  --accent-light:      #d8ede2;
+  --accent-text:       #1a4731;
+
+  --success:           #3d7a4f;
+  --warning:           #b07d2a;
+  --danger:            #b84040;
+  --warning-bg:        #fef3c7;
+  --danger-bg:         #fee2e2;
+
+  --budget-safe:       #4ade80;
+  --budget-warn:       #f59e0b;
+  --budget-over:       #f87171;
+}
+
+.dark {
+  --bg-page:           #0b0f0c;
+  --bg-surface:        #111612;
+  --bg-elevated:       #171d18;
+  --bg-subtle:         #1e251f;
+
+  --border:            #252e26;
+  --border-focus:      #52a872;
+
+  --text-primary:      #e8ede9;
+  --text-secondary:    #7a9480;
+  --text-muted:        #4a5e50;
+
+  --accent:            #52a872;
+  --accent-hover:      #63be85;
+  --accent-light:      #172216;
+  --accent-text:       #a3d9b4;
+
+  --success:           #52a872;
+  --warning:           #d4a843;
+  --danger:            #e06060;
+  --warning-bg:        #2a1f0a;
+  --danger-bg:         #2a0f0f;
+
+  --budget-safe:       #4ade80;
+  --budget-warn:       #f59e0b;
+  --budget-over:       #f87171;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: var(--bg-page);
+  --color-foreground: var(--text-primary);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+body {
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
+html,
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  overflow-x: clip;
+}
+
+/* Cards */
+.card-base {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  transition: border-color 150ms ease, background 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+.interactive-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 16px 40px rgb(0 0 0 / 0.08);
+}
+
+/* Inputs */
+input, textarea, select {
+  background: var(--bg-elevated) !important;
+  border-color: var(--border) !important;
+  color: var(--text-primary) !important;
+  height: 40px;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border-color 150ms ease, box-shadow 150ms ease, background 150ms ease;
+}
+input:focus, textarea:focus, select:focus {
+  border-color: var(--border-focus) !important;
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+textarea {
+  height: auto;
+}
+
+/* Primary Button */
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 150ms ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  border: none;
+}
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Danger Button */
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 150ms ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  border: none;
+}
+.btn-danger:hover { opacity: 0.9; }
+
+/* Ghost Button */
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 150ms ease, color 150ms ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  border: none;
+}
+.btn-ghost:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+/* Monospaced numbers */
+.mono {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Page fade-in */
+.page-enter {
+  animation: fadeIn 200ms ease forwards;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Selection */
+::selection {
+  background: var(--accent-light);
+  color: var(--accent-text);
 }
