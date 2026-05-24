@@ -183,9 +183,9 @@ export function FolderForm({
 
               <div className="max-h-64 overflow-y-auto rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] p-2">
                 <div className="grid grid-cols-7 gap-1.5 sm:grid-cols-10">
-                  {filteredEmojiOptions.map(({ emoji, keywords, label }) => (
+                  {filteredEmojiOptions.map(({ emoji, keywords, label }, index) => (
                     <button
-                      key={emoji}
+                      key={`${index}-${emoji}`}
                       type="button"
                       onClick={() => setIcon(emoji)}
                       className="flex h-9 w-full items-center justify-center rounded-md text-lg transition-all duration-150 hover:bg-[var(--accent-light)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
