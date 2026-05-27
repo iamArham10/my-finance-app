@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "./server";
+import { getMonthRange, getPreviousRange, parseIsoDate } from "@/lib/date-range";
 import type {
   Item,
   ItemWithFolder,
@@ -9,15 +10,24 @@ import type {
   MonthlyItemStats,
   MonthlySpending,
   MonthlyTrend,
+  DateRange,
 } from "@/types";
 
-export async function getItemsByFolder(folderId: string): Promise<Item[]> {
+export async function getItemsByFolder(
+  folderId: string,
+  range?: DateRange
+): Promise<Item[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("items")
     .select("*")
-    .eq("folder_id", folderId)
-    .order("date", { ascending: false });
+    .eq("folder_id", folderId);
+
+  if (range) {
+    query = query.gte("date", range.startDate).lte("date", range.endDate);
+  }
+
+  const { data, error } = await query.order("date", { ascending: false });
 
   if (error) throw error;
   if (!data) return [];
@@ -109,29 +119,18 @@ export async function getItemCount(userId: string): Promise<number> {
 }
 
 export async function getMonthlyItemStats(
-  userId: string
+  userId: string,
+  range: DateRange = getMonthRange()
 ): Promise<MonthlyItemStats> {
   const supabase = await createClient();
-  const now = new Date();
-  const startOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-    .toISOString()
-    .split("T")[0];
-  const endOfCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-    .toISOString()
-    .split("T")[0];
-  const startOfPreviousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-    .toISOString()
-    .split("T")[0];
-  const endOfPreviousMonth = new Date(now.getFullYear(), now.getMonth(), 0)
-    .toISOString()
-    .split("T")[0];
+  const previousRange = getPreviousRange(range);
 
   const { data, error } = await supabase
     .from("items")
     .select("total,date")
     .eq("user_id", userId)
-    .gte("date", startOfPreviousMonth)
-    .lte("date", endOfCurrentMonth);
+    .gte("date", previousRange.startDate)
+    .lte("date", range.endDate);
 
   if (error) throw error;
 
@@ -144,10 +143,13 @@ export async function getMonthlyItemStats(
     const itemDate = String(item.date);
     const total = Number(item.total) || 0;
 
-    if (itemDate >= startOfCurrentMonth && itemDate <= endOfCurrentMonth) {
+    if (itemDate >= range.startDate && itemDate <= range.endDate) {
       currentTotal += total;
       currentCount += 1;
-    } else if (itemDate >= startOfPreviousMonth && itemDate <= endOfPreviousMonth) {
+    } else if (
+      itemDate >= previousRange.startDate &&
+      itemDate <= previousRange.endDate
+    ) {
       previousTotal += total;
       previousCount += 1;
     }
@@ -164,10 +166,45 @@ export async function getMonthlyItemStats(
 
 export async function getRecentItems(
   userId: string,
-  limit = 5
+  limit = 5,
+  range?: DateRange
 ): Promise<ItemWithFolder[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let query = supabase
+    .from("items")
+    .select(`
+      *,
+      folders!inner (
+        name,
+        icon
+      )
+    `)
+    .eq("user_id", userId);
+
+  if (range) {
+    query = query.gte("date", range.startDate).lte("date", range.endDate);
+  }
+
+  const { data, error } = await query
+    .order("date", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+
+  const rawData = data as unknown as RawExpensiveItem[];
+  if (!rawData) return [];
+
+  return rawData.map(mapItemWithFolder);
+}
+
+export async function getReportItems(
+  userId: string,
+  range: DateRange,
+  folderId?: string
+): Promise<ItemWithFolder[]> {
+  const supabase = await createClient();
+  let query = supabase
     .from("items")
     .select(`
       *,
@@ -177,9 +214,16 @@ export async function getRecentItems(
       )
     `)
     .eq("user_id", userId)
-    .order("date", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(limit);
+    .gte("date", range.startDate)
+    .lte("date", range.endDate);
+
+  if (folderId) {
+    query = query.eq("folder_id", folderId);
+  }
+
+  const { data, error } = await query
+    .order("date", { ascending: true })
+    .order("created_at", { ascending: true });
 
   if (error) throw error;
 
@@ -202,11 +246,11 @@ interface RawMonthlySpendingItem {
   }[] | null;
 }
 
-export async function getMonthlySpendingByFolder(userId: string): Promise<MonthlySpending[]> {
+export async function getMonthlySpendingByFolder(
+  userId: string,
+  range: DateRange = getMonthRange()
+): Promise<MonthlySpending[]> {
   const supabase = await createClient();
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
-  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
 
   const { data, error } = await supabase
     .from("items")
@@ -219,8 +263,8 @@ export async function getMonthlySpendingByFolder(userId: string): Promise<Monthl
       )
     `)
     .eq("user_id", userId)
-    .gte("date", startOfMonth)
-    .lte("date", endOfMonth);
+    .gte("date", range.startDate)
+    .lte("date", range.endDate);
 
   if (error) throw error;
   
@@ -261,10 +305,13 @@ interface RawTrendItem {
   }[] | null;
 }
 
-export async function getLast6MonthsTrend(userId: string): Promise<MonthlyTrend[]> {
+export async function getLast6MonthsTrend(
+  userId: string,
+  range: DateRange = getMonthRange()
+): Promise<MonthlyTrend[]> {
   const supabase = await createClient();
-  const now = new Date();
-  const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+  const rangeEnd = parseIsoDate(range.endDate);
+  const sixMonthsAgo = new Date(rangeEnd.getFullYear(), rangeEnd.getMonth() - 5, 1);
   const startDate = sixMonthsAgo.toISOString().split("T")[0];
 
   const { data, error } = await supabase
@@ -285,7 +332,7 @@ export async function getLast6MonthsTrend(userId: string): Promise<MonthlyTrend[
   const months = new Map<string, MonthlyTrend>();
   
   for (let i = 0; i < 6; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
+    const d = new Date(rangeEnd.getFullYear(), rangeEnd.getMonth() - 5 + i, 1);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     const monthName = d.toLocaleDateString("en-US", { month: "short" });
     months.set(key, { month: monthName, total: 0, by_folder: [] });
@@ -358,9 +405,12 @@ function mapItemWithFolder(item: RawExpensiveItem): ItemWithFolder {
   };
 }
 
-export async function getTop5ExpensiveItems(userId: string): Promise<ItemWithFolder[]> {
+export async function getTop5ExpensiveItems(
+  userId: string,
+  range?: DateRange
+): Promise<ItemWithFolder[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("items")
     .select(`
       *,
@@ -369,7 +419,13 @@ export async function getTop5ExpensiveItems(userId: string): Promise<ItemWithFol
         icon
       )
     `)
-    .eq("user_id", userId)
+    .eq("user_id", userId);
+
+  if (range) {
+    query = query.gte("date", range.startDate).lte("date", range.endDate);
+  }
+
+  const { data, error } = await query
     .order("total", { ascending: false })
     .limit(5);
 

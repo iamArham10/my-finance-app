@@ -14,6 +14,10 @@ import { Money, formatPKR } from "@/components/ui/money";
 import { DonutChart } from "@/components/charts/donut-chart";
 import { BarChart } from "@/components/charts/bar-chart";
 import { SkeletonCard } from "@/components/ui/skeleton-card";
+import { PeriodSelector } from "@/components/nav/period-selector";
+import { ExportLink } from "@/components/export/export-report-actions";
+import { getRangeLabel, getRangeSearch, parseIsoDate } from "@/lib/date-range";
+import { useDateRangeParams } from "@/lib/use-date-range-params";
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -50,18 +54,25 @@ export default function AnalyticsPage() {
     EMPTY_MONTHLY_STATS
   );
   const [totalItems, setTotalItems] = useState(0);
+  const { range, setRange } = useDateRangeParams();
   
   const supabase = useMemo(() => createClient(), []);
+  const periodLabel = useMemo(() => getRangeLabel(range), [range]);
+  const exportHref = useMemo(
+    () => `/export?${getRangeSearch(range)}`,
+    [range]
+  );
 
   const loadData = useCallback(async (uid: string) => {
     try {
+      setLoading(true);
       const [rawFolders, spending, trend, expensiveItems, itemCount, stats] = await Promise.all([
         getFolders(uid),
-        getMonthlySpendingByFolder(uid),
-        getLast6MonthsTrend(uid),
-        getTop5ExpensiveItems(uid),
+        getMonthlySpendingByFolder(uid, range),
+        getLast6MonthsTrend(uid, range),
+        getTop5ExpensiveItems(uid, range),
         getItemCount(uid),
-        getMonthlyItemStats(uid),
+        getMonthlyItemStats(uid, range),
       ]);
 
       setFolders(rawFolders);
@@ -75,7 +86,7 @@ export default function AnalyticsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [range]);
 
   useEffect(() => {
     const getUser = async () => {
@@ -105,7 +116,7 @@ export default function AnalyticsPage() {
   }
 
   const currentTotal = monthlySpending.reduce((sum, item) => sum + item.total, 0);
-  const lastTotal = monthlyTrend.at(-2)?.total ?? 0;
+  const lastTotal = monthlyStats.previous_total;
 
   const difference = currentTotal - lastTotal;
   const percentChange = lastTotal === 0 ? 100 : (difference / lastTotal) * 100;
@@ -123,8 +134,12 @@ export default function AnalyticsPage() {
       ? monthlyTrend.reduce((sum, month) => sum + month.total, 0) /
         monthlyTrend.length
       : 0;
-  const daysElapsed = new Date().getDate();
-  const dailyAverage = daysElapsed > 0 ? currentTotal / daysElapsed : 0;
+  const rangeStart = parseIsoDate(range.startDate);
+  const rangeEnd = parseIsoDate(range.endDate);
+  const daysInRange =
+    Math.round((rangeEnd.getTime() - rangeStart.getTime()) / (24 * 60 * 60 * 1000)) +
+    1;
+  const dailyAverage = daysInRange > 0 ? currentTotal / daysInRange : 0;
   
   // --- Donut Chart Data (Current Month Split) ---
   const donutData = monthlySpending
@@ -153,16 +168,22 @@ export default function AnalyticsPage() {
   return (
     <div>
       {/* Header */}
-      <div className="mb-8">
-        <h1
-          className="text-2xl font-semibold"
-          style={{ color: "var(--text-primary)", letterSpacing: "-0.02em" }}
-        >
-          Analytics
-        </h1>
-        <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
-          Insights into your spending habits
-        </p>
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1
+            className="text-2xl font-semibold"
+            style={{ color: "var(--text-primary)", letterSpacing: "-0.02em" }}
+          >
+            Analytics
+          </h1>
+          <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
+            Insights for {periodLabel}
+          </p>
+        </div>
+        <div className="flex flex-col gap-3 sm:items-end">
+          <ExportLink href={exportHref} />
+          <PeriodSelector range={range} onRangeChange={setRange} />
+        </div>
       </div>
 
       {/* Summary Row */}
@@ -190,7 +211,7 @@ export default function AnalyticsPage() {
               />
             )}
             <p className="text-xs" style={{ color: difference > 0 ? "var(--danger)" : "var(--success)" }}>
-              {Math.abs(percentChange).toFixed(1)}% {difference > 0 ? "more" : "less"} than last month
+              {Math.abs(percentChange).toFixed(1)}% {difference > 0 ? "more" : "less"} than previous period
             </p>
           </div>
         </div>
@@ -198,7 +219,7 @@ export default function AnalyticsPage() {
         <div className="card-base" style={{ padding: 24 }}>
           <div className="mb-2 flex items-center justify-between">
             <p className="text-sm font-medium" style={{ color: "var(--text-secondary)" }}>
-              Items This Month
+              Items
             </p>
             <ReceiptText className="h-4 w-4 text-[var(--text-muted)]" />
           </div>
@@ -206,7 +227,7 @@ export default function AnalyticsPage() {
             {monthlyStats.current_count}
           </p>
           <p className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>
-            {monthlyStats.previous_count} last month
+            {monthlyStats.previous_count} previous period
           </p>
         </div>
 
@@ -283,13 +304,13 @@ export default function AnalyticsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
         <div className="card-base" style={{ padding: 24 }}>
           <h2 className="text-base font-semibold mb-6" style={{ color: "var(--text-primary)" }}>
-            Spending by Category (This Month)
+            Spending by Category
           </h2>
           {donutData.length > 0 ? (
             <DonutChart data={donutData} />
           ) : (
             <div className="flex items-center justify-center h-[300px] text-sm" style={{ color: "var(--text-muted)" }}>
-              No data for this month
+              No data for this period
             </div>
           )}
         </div>
@@ -351,7 +372,7 @@ export default function AnalyticsPage() {
             </div>
           ) : (
             <div className="text-sm text-center py-4" style={{ color: "var(--text-muted)" }}>
-              No category data this month
+              No category data for this period
             </div>
           )}
         </div>

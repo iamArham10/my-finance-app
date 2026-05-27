@@ -33,6 +33,11 @@ export interface FolderWithStats extends Folder {
   monthly_total: number;
 }
 
+export interface DateRange {
+  startDate: string;
+  endDate: string;
+}
+
 export interface MonthlySpending {
   folder_id: string;
   folder_name: string;

@@ -9,9 +9,15 @@ interface FolderGridProps {
   folders: FolderWithStats[];
   loading: boolean;
   onCreateFolder: () => void;
+  queryString?: string;
 }
 
-export function FolderGrid({ folders, loading, onCreateFolder }: FolderGridProps) {
+export function FolderGrid({
+  folders,
+  loading,
+  onCreateFolder,
+  queryString,
+}: FolderGridProps) {
   if (loading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -37,7 +43,7 @@ export function FolderGrid({ folders, loading, onCreateFolder }: FolderGridProps
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {folders.map((folder) => (
-        <FolderCard key={folder.id} folder={folder} />
+        <FolderCard key={folder.id} folder={folder} queryString={queryString} />
       ))}
     </div>
   );

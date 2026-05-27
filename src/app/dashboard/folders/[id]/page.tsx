@@ -9,8 +9,17 @@ import { ItemsTable } from "@/components/items/items-table";
 import { ItemForm } from "@/components/items/item-form";
 import { FolderForm } from "@/components/folders/folder-form";
 import { MiniBarChart } from "@/components/charts/mini-bar-chart";
+import { PeriodSelector } from "@/components/nav/period-selector";
+import { ExportLink } from "@/components/export/export-report-actions";
 import { formatPKR } from "@/components/ui/money";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  getRangeLabel,
+  getRangeSearch,
+  parseIsoDate,
+  toIsoDate,
+} from "@/lib/date-range";
+import { useDateRangeParams } from "@/lib/use-date-range-params";
 import { ArrowLeft, Edit2, Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import type { Folder, Item, CreateFolderData, CreateItemData } from "@/types";
@@ -34,13 +43,23 @@ export default function FolderDetailPage({
   const [showEditFolder, setShowEditFolder] = useState(false);
   const [showItemForm, setShowItemForm] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | undefined>(undefined);
+  const { range, setRange } = useDateRangeParams();
+  const periodLabel = useMemo(() => getRangeLabel(range), [range]);
+  const exportHref = useMemo(
+    () => `/export?${getRangeSearch(range)}&folderId=${encodeURIComponent(folderId)}`,
+    [folderId, range]
+  );
+  const defaultItemDate = useMemo(() => {
+    const today = toIsoDate(new Date());
+    return today >= range.startDate && today <= range.endDate ? today : range.endDate;
+  }, [range]);
 
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const [folderData, itemsData] = await Promise.all([
         getFolderById(folderId),
-        getItemsByFolder(folderId),
+        getItemsByFolder(folderId, range),
       ]);
       setFolder(folderData);
       setItems(itemsData);
@@ -51,7 +70,7 @@ export default function FolderDetailPage({
     } finally {
       setLoading(false);
     }
-  }, [folderId, router]);
+  }, [folderId, range, router]);
 
   useEffect(() => {
     const getUser = async () => {
@@ -74,7 +93,7 @@ export default function FolderDetailPage({
     try {
       await deleteFolder(folderId);
       toast.success("Folder deleted");
-      router.push("/dashboard");
+      router.push(`/dashboard?${getRangeSearch(range)}`);
     } catch {
       toast.error("Failed to delete folder");
     }
@@ -104,38 +123,30 @@ export default function FolderDetailPage({
 
   if (!folder && !loading) return null;
 
-  // Calculate current month's spending and chart data
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
-  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
-
-  const currentMonthItems = items.filter(
-    (item) => item.date >= startOfMonth && item.date <= endOfMonth
-  );
+  const periodTotal = items.reduce((sum, item) => sum + item.total, 0);
   
-  const monthlyTotal = currentMonthItems.reduce((sum, item) => sum + item.total, 0);
-  
-  // Aggregate data for MiniBarChart (daily totals for current month)
   const chartDataMap = new Map<string, number>();
-  // Pre-fill days of the month (1 to 31 depending on month)
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  for (let i = 1; i <= daysInMonth; i++) {
-    chartDataMap.set(i.toString(), 0);
+  const startDate = parseIsoDate(range.startDate);
+  const endDate = parseIsoDate(range.endDate);
+  for (const day = new Date(startDate); day <= endDate; day.setDate(day.getDate() + 1)) {
+    chartDataMap.set(toIsoDate(day), 0);
   }
   
-  currentMonthItems.forEach((item) => {
-    const day = parseInt(item.date.split("-")[2], 10).toString();
-    chartDataMap.set(day, (chartDataMap.get(day) || 0) + item.total);
+  items.forEach((item) => {
+    chartDataMap.set(item.date, (chartDataMap.get(item.date) || 0) + item.total);
   });
   
-  const chartData = Array.from(chartDataMap.entries()).map(([day, amount]) => ({
-    date: day,
+  const chartData = Array.from(chartDataMap.entries()).map(([date, amount]) => ({
+    date: parseIsoDate(date).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    }),
     amount,
   }));
 
-  const isOverBudget = folder?.budget_limit ? monthlyTotal > folder.budget_limit : false;
+  const isOverBudget = folder?.budget_limit ? periodTotal > folder.budget_limit : false;
   const budgetPercentage = folder?.budget_limit 
-    ? Math.min((monthlyTotal / folder.budget_limit) * 100, 100) 
+    ? Math.min((periodTotal / folder.budget_limit) * 100, 100) 
     : 0;
 
   return (
@@ -144,7 +155,7 @@ export default function FolderDetailPage({
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <button
-            onClick={() => router.push("/dashboard")}
+            onClick={() => router.push(`/dashboard?${getRangeSearch(range)}`)}
             className="p-2 -ml-2 rounded-lg hover:bg-[var(--bg-elevated)] text-[var(--text-secondary)] transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -188,6 +199,11 @@ export default function FolderDetailPage({
         )}
       </div>
 
+      <div className="mb-6 flex flex-col gap-3 sm:items-end">
+        <ExportLink href={exportHref} label="Export Folder PDF" />
+        <PeriodSelector range={range} onRangeChange={setRange} />
+      </div>
+
       {/* Budget Banner */}
       {!loading && folder?.budget_limit && (
         <div className="mb-8">
@@ -209,7 +225,7 @@ export default function FolderDetailPage({
             }`}
           >
             <p className={isOverBudget ? "text-[var(--danger)]" : "text-[var(--text-secondary)]"}>
-              <span className="mono font-medium">{formatPKR(monthlyTotal)}</span> spent of <span className="mono">{formatPKR(folder.budget_limit)}</span> budget this month
+              <span className="mono font-medium">{formatPKR(periodTotal)}</span> spent of <span className="mono">{formatPKR(folder.budget_limit)}</span> budget in {periodLabel}
             </p>
             <span className="mono font-medium">{Math.round(budgetPercentage)}% used</span>
           </div>
@@ -217,7 +233,7 @@ export default function FolderDetailPage({
       )}
 
       {/* Mini Chart */}
-      {!loading && currentMonthItems.length > 0 && (
+      {!loading && items.length > 0 && (
         <MiniBarChart data={chartData} />
       )}
 
@@ -274,6 +290,7 @@ export default function FolderDetailPage({
         }}
         onSubmit={handleSaveItem}
         initialData={editingItem}
+        defaultDate={defaultItemDate}
       />
     </div>
   );

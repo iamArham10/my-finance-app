@@ -1,11 +1,13 @@
 "use server";
 
 import { createClient } from "./server";
+import { getMonthRange } from "@/lib/date-range";
 import type {
   Folder,
   FolderWithStats,
   CreateFolderData,
   UpdateFolderData,
+  DateRange,
 } from "@/types";
 
 export async function getFolders(userId: string): Promise<Folder[]> {
@@ -29,25 +31,20 @@ export async function getFolders(userId: string): Promise<Folder[]> {
 }
 
 export async function getFoldersWithStats(
-  userId: string
+  userId: string,
+  range: DateRange = getMonthRange()
 ): Promise<FolderWithStats[]> {
   const supabase = await createClient();
   const folders = await getFolders(userId);
 
   if (folders.length === 0) return [];
 
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-    .toISOString()
-    .split("T")[0];
-  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-    .toISOString()
-    .split("T")[0];
-
   const { data, error } = await supabase
     .from("items")
-    .select("folder_id,total,date")
-    .eq("user_id", userId);
+    .select("folder_id,total")
+    .eq("user_id", userId)
+    .gte("date", range.startDate)
+    .lte("date", range.endDate);
 
   if (error) throw error;
 
@@ -64,10 +61,7 @@ export async function getFoldersWithStats(
     };
 
     stats.item_count += 1;
-    const itemDate = String(item.date);
-    if (itemDate >= startOfMonth && itemDate <= endOfMonth) {
-      stats.monthly_total += Number(item.total) || 0;
-    }
+    stats.monthly_total += Number(item.total) || 0;
 
     statsByFolder.set(folderId, stats);
   }
@@ -150,18 +144,18 @@ export async function deleteFolder(folderId: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function getFolderMonthlyTotal(folderId: string): Promise<number> {
+export async function getFolderMonthlyTotal(
+  folderId: string,
+  range: DateRange = getMonthRange()
+): Promise<number> {
   const supabase = await createClient();
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
-  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
 
   const { data, error } = await supabase
     .from("items")
     .select("total")
     .eq("folder_id", folderId)
-    .gte("date", startOfMonth)
-    .lte("date", endOfMonth);
+    .gte("date", range.startDate)
+    .lte("date", range.endDate);
 
   if (error) throw error;
   if (!data) return 0;

@@ -220,6 +220,17 @@ textarea {
   background: var(--text-muted);
 }
 
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+  }
+}
+
 /* Selection */
 ::selection {
   background: var(--accent-light);

@@ -23,6 +23,7 @@ interface ItemFormProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: Omit<CreateItemData, "folder_id">) => Promise<void>;
   initialData?: Item;
+  defaultDate?: string;
 }
 
 const UNIT_OPTIONS = ["litres", "kg", "pcs", "hours", "months"];
@@ -32,6 +33,7 @@ export function ItemForm({
   onOpenChange,
   onSubmit,
   initialData,
+  defaultDate,
 }: ItemFormProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -47,6 +49,7 @@ export function ItemForm({
           onOpenChange={onOpenChange}
           onSubmit={onSubmit}
           initialData={initialData}
+          defaultDate={defaultDate}
         />
       </SheetContent>
     </Sheet>
@@ -57,6 +60,7 @@ function ItemFormFields({
   onOpenChange,
   onSubmit,
   initialData,
+  defaultDate,
 }: Omit<ItemFormProps, "open">) {
   const initialUnit = initialData
     ? UNIT_OPTIONS.includes(initialData.unit)
@@ -76,7 +80,7 @@ function ItemFormFields({
       : ""
   );
   const [date, setDate] = useState(
-    initialData?.date ?? new Date().toISOString().split("T")[0]
+    initialData?.date ?? defaultDate ?? new Date().toISOString().split("T")[0]
   );
   const [note, setNote] = useState(initialData?.note ?? "");
   

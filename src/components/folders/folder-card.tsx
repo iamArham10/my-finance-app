@@ -7,11 +7,16 @@ import type { FolderWithStats } from "@/types";
 
 interface FolderCardProps {
   folder: FolderWithStats;
+  queryString?: string;
 }
 
-export function FolderCard({ folder }: FolderCardProps) {
+export function FolderCard({ folder, queryString }: FolderCardProps) {
+  const href = queryString
+    ? `/dashboard/folders/${folder.id}?${queryString}`
+    : `/dashboard/folders/${folder.id}`;
+
   return (
-    <Link href={`/dashboard/folders/${folder.id}`}>
+    <Link href={href}>
       <div className="card-base interactive-card cursor-pointer" style={{ padding: 24 }}>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">

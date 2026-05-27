@@ -6,8 +6,12 @@ import { getFoldersWithStats, createFolder } from "@/lib/supabase/folders";
 import { getMonthlyItemStats, getRecentItems } from "@/lib/supabase/items";
 import { FolderGrid } from "@/components/folders/folder-grid";
 import { FolderForm } from "@/components/folders/folder-form";
+import { PeriodSelector } from "@/components/nav/period-selector";
+import { ExportLink } from "@/components/export/export-report-actions";
 import { Money, formatPKR } from "@/components/ui/money";
 import { BudgetBar } from "@/components/ui/budget-bar";
+import { getRangeLabel, getRangeSearch } from "@/lib/date-range";
+import { useDateRangeParams } from "@/lib/use-date-range-params";
 import {
   AlertTriangle,
   ArrowDownRight,
@@ -42,15 +46,23 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const { range, setRange } = useDateRangeParams();
   
   const supabase = useMemo(() => createClient(), []);
+  const rangeQueryString = useMemo(() => getRangeSearch(range), [range]);
+  const exportHref = useMemo(
+    () => `/export?${rangeQueryString}`,
+    [rangeQueryString]
+  );
+  const periodLabel = useMemo(() => getRangeLabel(range), [range]);
 
   const loadFolders = useCallback(async (uid: string) => {
     try {
+      setLoading(true);
       const [foldersWithStats, stats, recent] = await Promise.all([
-        getFoldersWithStats(uid),
-        getMonthlyItemStats(uid),
-        getRecentItems(uid, 5),
+        getFoldersWithStats(uid, range),
+        getMonthlyItemStats(uid, range),
+        getRecentItems(uid, 5, range),
       ]);
 
       setFolders(foldersWithStats);
@@ -62,7 +74,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [range]);
 
   useEffect(() => {
     const getUser = async () => {
@@ -84,10 +96,6 @@ export default function DashboardPage() {
 
   // Calculate summary stats
   const totalSpent = monthlyStats.current_total;
-  const currentMonth = new Date().toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
   const totalBudget = folders.reduce(
     (sum, folder) => sum + (folder.budget_limit ?? 0),
     0
@@ -120,7 +128,7 @@ export default function DashboardPage() {
   return (
     <div>
       {/* Page Title */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1
             className="text-2xl font-semibold"
@@ -129,8 +137,12 @@ export default function DashboardPage() {
             Dashboard
           </h1>
           <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
-            {currentMonth}
+            {periodLabel}
           </p>
+        </div>
+        <div className="flex flex-col gap-3 sm:items-end">
+          <ExportLink href={exportHref} />
+          <PeriodSelector range={range} onRangeChange={setRange} />
         </div>
       </div>
 
@@ -149,13 +161,13 @@ export default function DashboardPage() {
             className="text-sm font-medium mb-2"
             style={{ color: "var(--accent-text)" }}
           >
-            Total Spent This Month
+            Total Spent
           </p>
           <div style={{ color: "var(--accent)" }}>
             <Money amount={totalSpent} className="text-2xl font-semibold" />
           </div>
           <p className="text-xs mt-1" style={{ color: "var(--accent-text)", opacity: 0.7 }}>
-            spent in {currentMonth}
+            spent in {periodLabel}
           </p>
           <div className="mt-4 flex items-center gap-2 text-xs" style={{ color: monthDifference > 0 ? "var(--danger)" : "var(--success)" }}>
             {monthDifference > 0 ? (
@@ -163,7 +175,7 @@ export default function DashboardPage() {
             ) : (
               <ArrowDownRight className="h-3.5 w-3.5" />
             )}
-            {Math.abs(monthChangePercent)}% {monthDifference > 0 ? "more" : "less"} than last month
+            {Math.abs(monthChangePercent)}% {monthDifference > 0 ? "more" : "less"} than previous period
           </div>
         </div>
 
@@ -174,7 +186,7 @@ export default function DashboardPage() {
               className="text-sm font-medium"
               style={{ color: "var(--text-secondary)" }}
             >
-              Items This Month
+              Items
             </p>
             <ReceiptText
               className="w-4 h-4"
@@ -188,7 +200,7 @@ export default function DashboardPage() {
             {monthlyStats.current_count}
           </p>
           <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
-            {Math.abs(itemDifference)} {itemDifference >= 0 ? "more" : "fewer"} than last month
+            {Math.abs(itemDifference)} {itemDifference >= 0 ? "more" : "fewer"} than previous period
           </p>
         </div>
 
@@ -267,7 +279,7 @@ export default function DashboardPage() {
                 Spending Focus
               </h2>
               <p className="text-sm text-[var(--text-muted)]">
-                Categories driving this month&apos;s total
+                Categories driving this period&apos;s total
               </p>
             </div>
             {totalBudget > 0 && (
@@ -298,7 +310,7 @@ export default function DashboardPage() {
                           {formatPKR(folder.monthly_total)}
                         </p>
                         <p className="text-xs text-[var(--text-muted)]">
-                          {share}% of month
+                          {share}% of period
                         </p>
                       </div>
                     </div>
@@ -386,6 +398,7 @@ export default function DashboardPage() {
           folders={folders}
           loading={loading}
           onCreateFolder={() => setShowCreateModal(true)}
+          queryString={rangeQueryString}
         />
       </div>
 

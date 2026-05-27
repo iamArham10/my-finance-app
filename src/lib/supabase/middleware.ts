@@ -40,7 +40,7 @@ export async function updateSession(request: NextRequest) {
       data: { user: authUser },
     } = await supabase.auth.getUser();
     user = authUser;
-  } catch (error) {
+  } catch {
     // Continue without user data if auth check fails
   }
 
