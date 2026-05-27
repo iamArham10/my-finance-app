@@ -198,6 +198,38 @@ export async function getRecentItems(
   return rawData.map(mapItemWithFolder);
 }
 
+export async function getItemsWithFolders(
+  userId: string,
+  range?: DateRange
+): Promise<ItemWithFolder[]> {
+  const supabase = await createClient();
+  let query = supabase
+    .from("items")
+    .select(`
+      *,
+      folders!inner (
+        name,
+        icon
+      )
+    `)
+    .eq("user_id", userId);
+
+  if (range) {
+    query = query.gte("date", range.startDate).lte("date", range.endDate);
+  }
+
+  const { data, error } = await query
+    .order("date", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+
+  const rawData = data as unknown as RawExpensiveItem[];
+  if (!rawData) return [];
+
+  return rawData.map(mapItemWithFolder);
+}
+
 export async function getReportItems(
   userId: string,
   range: DateRange,
