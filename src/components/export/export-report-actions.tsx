@@ -18,13 +18,13 @@ export function ExportReportActions() {
 
 export function ExportLink({
   href,
-  label = "Export PDF",
+  label = "Export",
 }: {
   href: string;
   label?: string;
 }) {
   return (
-    <a href={href} target="_blank" rel="noreferrer" className="btn-ghost">
+    <a href={href} target="_blank" rel="noreferrer" className="export-link">
       <Download className="h-4 w-4" />
       {label}
     </a>

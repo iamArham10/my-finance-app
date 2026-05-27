@@ -151,32 +151,36 @@ export default function FolderDetailPage({
 
   return (
     <div className="relative min-h-[calc(100vh-140px)]">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
+      <div className="page-header">
+        <div className="flex min-w-0 items-start gap-4">
           <button
             onClick={() => router.push(`/dashboard?${getRangeSearch(range)}`)}
             className="p-2 -ml-2 rounded-lg hover:bg-[var(--bg-elevated)] text-[var(--text-secondary)] transition-colors"
+            aria-label="Back to dashboard"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           {loading ? (
             <div className="h-8 w-48 bg-[var(--bg-elevated)] animate-pulse rounded" />
           ) : (
-            <div
-              className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
-              onClick={() => setShowEditFolder(true)}
-            >
-              <span className="text-3xl">{folder?.icon}</span>
-              <h1 className="text-2xl font-semibold text-[var(--text-primary)]">
-                {folder?.name}
-              </h1>
+            <div className="page-heading">
+              <button
+                className="flex min-w-0 items-center gap-3 text-left transition-opacity hover:opacity-80"
+                onClick={() => setShowEditFolder(true)}
+              >
+                <span className="text-3xl">{folder?.icon}</span>
+                <span className="min-w-0">
+                  <h1>{folder?.name}</h1>
+                  <p>{periodLabel}</p>
+                </span>
+              </button>
             </div>
           )}
         </div>
         
         {!loading && (
-          <div className="flex items-center gap-2">
+          <div className="page-actions">
+            <ExportLink href={exportHref} label="Export" />
             <button
               onClick={() => setShowEditFolder(true)}
               className="btn-ghost hidden sm:inline-flex"
@@ -199,8 +203,7 @@ export default function FolderDetailPage({
         )}
       </div>
 
-      <div className="mb-6 flex flex-col gap-3 sm:items-end">
-        <ExportLink href={exportHref} label="Export Folder PDF" />
+      <div className="mb-6 flex justify-start sm:justify-end">
         <PeriodSelector range={range} onRangeChange={setRange} />
       </div>
 

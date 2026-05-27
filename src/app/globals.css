@@ -189,6 +189,168 @@ textarea {
   color: var(--text-primary);
 }
 
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.page-heading {
+  min-width: 0;
+}
+
+.page-heading h1 {
+  color: var(--text-primary);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.page-heading p {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.page-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.export-link {
+  align-items: center;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 600;
+  gap: 8px;
+  height: 40px;
+  justify-content: center;
+  padding: 0 14px;
+  transition: border-color 150ms ease, background 150ms ease, color 150ms ease;
+  white-space: nowrap;
+}
+
+.export-link:hover {
+  background: var(--bg-elevated);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  color: var(--text-primary);
+}
+
+.period-control {
+  align-items: stretch;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 6px;
+}
+
+.period-control__month,
+.period-control__custom {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+}
+
+.period-control__icon {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  height: 32px;
+  justify-content: center;
+  transition: background 150ms ease, color 150ms ease;
+  width: 32px;
+}
+
+.period-control__icon:hover {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+.period-control__label {
+  align-items: center;
+  background: var(--bg-elevated);
+  border-radius: 8px;
+  display: flex;
+  gap: 8px;
+  height: 32px;
+  justify-content: center;
+  min-width: 168px;
+  padding: 0 12px;
+}
+
+.period-control__date {
+  height: 32px !important;
+  padding: 0 9px;
+  width: 136px;
+}
+
+.period-control__dash {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.period-control__apply {
+  align-items: center;
+  background: var(--accent);
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 600;
+  height: 32px;
+  justify-content: center;
+  padding: 0 12px;
+}
+
+.period-control__apply:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+@media (max-width: 760px) {
+  .page-header {
+    flex-direction: column;
+  }
+
+  .page-actions,
+  .period-control {
+    justify-content: stretch;
+    width: 100%;
+  }
+
+  .export-link,
+  .period-control__month,
+  .period-control__custom {
+    width: 100%;
+  }
+
+  .period-control__label,
+  .period-control__date {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
 /* Monospaced numbers */
 .mono {
   font-family: var(--font-geist-mono), ui-monospace, monospace;

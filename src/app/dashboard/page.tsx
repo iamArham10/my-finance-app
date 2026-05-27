@@ -128,19 +128,12 @@ export default function DashboardPage() {
   return (
     <div>
       {/* Page Title */}
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1
-            className="text-2xl font-semibold"
-            style={{ color: "var(--text-primary)", letterSpacing: "-0.02em" }}
-          >
-            Dashboard
-          </h1>
-          <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
-            {periodLabel}
-          </p>
+      <div className="page-header">
+        <div className="page-heading">
+          <h1>Dashboard</h1>
+          <p>{periodLabel}</p>
         </div>
-        <div className="flex flex-col gap-3 sm:items-end">
+        <div className="page-actions">
           <ExportLink href={exportHref} />
           <PeriodSelector range={range} onRangeChange={setRange} />
         </div>
@@ -379,12 +372,14 @@ export default function DashboardPage() {
       {/* Folder Grid */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h2
-            className="text-lg font-semibold"
-            style={{ color: "var(--text-primary)", letterSpacing: "-0.02em" }}
-          >
-            Your Folders
-          </h2>
+          <div>
+            <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+              Folders
+            </h2>
+            <p className="text-sm text-[var(--text-muted)]">
+              Category totals for {periodLabel}
+            </p>
+          </div>
           <button
             onClick={() => setShowCreateModal(true)}
             className="btn-primary"

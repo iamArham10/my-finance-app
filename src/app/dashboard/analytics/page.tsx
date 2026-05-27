@@ -168,19 +168,12 @@ export default function AnalyticsPage() {
   return (
     <div>
       {/* Header */}
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1
-            className="text-2xl font-semibold"
-            style={{ color: "var(--text-primary)", letterSpacing: "-0.02em" }}
-          >
-            Analytics
-          </h1>
-          <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
-            Insights for {periodLabel}
-          </p>
+      <div className="page-header">
+        <div className="page-heading">
+          <h1>Analytics</h1>
+          <p>Insights for {periodLabel}</p>
         </div>
-        <div className="flex flex-col gap-3 sm:items-end">
+        <div className="page-actions">
           <ExportLink href={exportHref} />
           <PeriodSelector range={range} onRangeChange={setRange} />
         </div>

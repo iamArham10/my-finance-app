@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, CalendarDays, RotateCcw } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
 import {
   getMonthRange,
   getRangeLabel,
@@ -36,18 +36,18 @@ export function PeriodSelector({ range, onRangeChange }: PeriodSelectorProps) {
   const showCustomRange = range.startDate !== customStart || range.endDate !== customEnd;
 
   return (
-    <div className="flex flex-col gap-3 sm:items-end">
-      <div className="flex items-center gap-2">
+    <div className="period-control">
+      <div className="period-control__month">
         <button
           type="button"
-          className="btn-ghost px-2"
+          className="period-control__icon"
           onClick={() => onRangeChange(shiftRangeByMonths(range, -1))}
           aria-label="Previous month"
           title="Previous month"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
-        <div className="flex h-9 min-w-[180px] items-center justify-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--bg-surface)] px-3">
+        <div className="period-control__label">
           <CalendarDays className="h-4 w-4 text-[var(--text-muted)]" />
           <span className="text-sm font-medium text-[var(--text-primary)]">
             {getRangeLabel(range)}
@@ -55,7 +55,7 @@ export function PeriodSelector({ range, onRangeChange }: PeriodSelectorProps) {
         </div>
         <button
           type="button"
-          className="btn-ghost px-2"
+          className="period-control__icon"
           onClick={() => onRangeChange(shiftRangeByMonths(range, 1))}
           aria-label="Next month"
           title="Next month"
@@ -65,7 +65,7 @@ export function PeriodSelector({ range, onRangeChange }: PeriodSelectorProps) {
         {!isCurrentMonthRange(range) && (
           <button
             type="button"
-            className="btn-ghost px-2"
+            className="period-control__icon"
             onClick={() => onRangeChange(getMonthRange())}
             aria-label="Current month"
             title="Current month"
@@ -75,7 +75,7 @@ export function PeriodSelector({ range, onRangeChange }: PeriodSelectorProps) {
         )}
       </div>
 
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+      <div className="period-control__custom">
         <input
           type="date"
           value={customStart}
@@ -86,9 +86,10 @@ export function PeriodSelector({ range, onRangeChange }: PeriodSelectorProps) {
               endDate: customEnd,
             })
           }
-          className="h-9 w-full px-3 text-sm sm:w-[150px]"
+          className="period-control__date"
           aria-label="Start date"
         />
+        <span className="period-control__dash">to</span>
         <input
           type="date"
           value={customEnd}
@@ -99,17 +100,19 @@ export function PeriodSelector({ range, onRangeChange }: PeriodSelectorProps) {
               endDate: event.target.value,
             })
           }
-          className="h-9 w-full px-3 text-sm sm:w-[150px]"
+          className="period-control__date"
           aria-label="End date"
         />
-        <button
-          type="button"
-          className="btn-ghost"
-          disabled={!showCustomRange || customStart > customEnd}
-          onClick={applyCustomRange}
-        >
-          Apply
-        </button>
+        {showCustomRange && (
+          <button
+            type="button"
+            className="period-control__apply"
+            disabled={customStart > customEnd}
+            onClick={applyCustomRange}
+          >
+            Apply
+          </button>
+        )}
       </div>
     </div>
   );
