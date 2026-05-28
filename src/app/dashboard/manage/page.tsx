@@ -33,6 +33,8 @@ import {
   ReceiptText,
   Search,
   Trash2,
+  Copy,
+  CheckSquare,
 } from "lucide-react";
 import { toast } from "sonner";
 import type {
@@ -58,6 +60,8 @@ export default function ManagePage() {
   );
   const [showItemForm, setShowItemForm] = useState(false);
   const [editingItem, setEditingItem] = useState<ItemWithFolder | undefined>();
+  const [duplicatingItem, setDuplicatingItem] = useState<ItemWithFolder | undefined>();
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [defaultFolderId, setDefaultFolderId] = useState<string | undefined>();
   const { range, setRange } = useDateRangeParams();
 
@@ -178,6 +182,7 @@ export default function ManagePage() {
       toast.success("Item added");
     }
     setEditingItem(undefined);
+    setDuplicatingItem(undefined);
     refresh();
   };
 
@@ -191,8 +196,43 @@ export default function ManagePage() {
     }
   };
 
+  const handleDuplicateItem = (item: ItemWithFolder) => {
+    setDuplicatingItem(item);
+    setShowItemForm(true);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedItems.size === 0) return;
+    try {
+      setLoading(true);
+      await Promise.all(Array.from(selectedItems).map(id => deleteItem(id)));
+      toast.success(`Deleted ${selectedItems.size} items`);
+      setSelectedItems(new Set());
+      refresh();
+    } catch {
+      toast.error("Failed to delete some items");
+      setLoading(false);
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedItems.size === filteredItems.length) {
+      setSelectedItems(new Set());
+    } else {
+      setSelectedItems(new Set(filteredItems.map((i) => i.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const newSet = new Set(selectedItems);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setSelectedItems(newSet);
+  };
+
   const openNewItem = (folderId?: string) => {
     setEditingItem(undefined);
+    setDuplicatingItem(undefined);
     setDefaultFolderId(folderId ?? folders[0]?.id);
     setShowItemForm(true);
   };
@@ -428,6 +468,26 @@ export default function ManagePage() {
         </section>
 
         <section className="card-base" style={{ padding: 24 }}>
+          {selectedItems.size > 0 && (
+            <div className="mb-4 flex items-center justify-between rounded-lg bg-[var(--accent-light)] px-4 py-2 border border-[var(--border)]">
+              <span className="text-sm font-medium" style={{ color: "var(--accent-text)" }}>
+                {selectedItems.size} item{selectedItems.size > 1 ? 's' : ''} selected
+              </span>
+              <ConfirmDialog
+                title="Delete items?"
+                description={`Are you sure you want to delete ${selectedItems.size} items? This cannot be undone.`}
+                confirmLabel="Delete All"
+                onConfirm={handleBulkDelete}
+                trigger={
+                  <button className="btn-danger h-8 px-3 text-xs">
+                    <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                    Delete Selected
+                  </button>
+                }
+              />
+            </div>
+          )}
+
           <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 className="text-base font-semibold text-[var(--text-primary)]">
@@ -491,6 +551,19 @@ export default function ManagePage() {
               <table className="w-full min-w-[720px] border-collapse text-left">
                 <thead>
                   <tr className="border-b border-[var(--border)] text-[12px] uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                    <th className="px-2 py-3 w-10">
+                      <input
+                        type="checkbox"
+                        checked={selectedItems.size > 0 && selectedItems.size === filteredItems.length}
+                        ref={input => {
+                          if (input) {
+                            input.indeterminate = selectedItems.size > 0 && selectedItems.size < filteredItems.length;
+                          }
+                        }}
+                        onChange={toggleSelectAll}
+                        className="rounded border-[var(--border)] text-[var(--accent)] focus:ring-[var(--accent)]"
+                      />
+                    </th>
                     <th className="px-2 py-3">Date</th>
                     <th className="px-2 py-3">Item</th>
                     <th className="px-2 py-3">Folder</th>
@@ -506,6 +579,14 @@ export default function ManagePage() {
                       className="group border-b border-[var(--border)] transition-colors hover:bg-[var(--bg-elevated)]"
                       style={{ height: 52 }}
                     >
+                      <td className="px-2 w-10">
+                        <input
+                          type="checkbox"
+                          checked={selectedItems.has(item.id)}
+                          onChange={() => toggleSelect(item.id)}
+                          className="rounded border-[var(--border)] text-[var(--accent)] focus:ring-[var(--accent)]"
+                        />
+                      </td>
                       <td className="px-2 text-sm text-[var(--text-secondary)]">
                         {new Date(item.date).toLocaleDateString("en-US", {
                           month: "short",
@@ -543,6 +624,13 @@ export default function ManagePage() {
                             aria-label={`Edit ${item.name}`}
                           >
                             <Pencil className="h-4 w-4" />
+                          </button>
+                          <button
+                            className="rounded p-1.5 text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface)] hover:text-[var(--text-primary)]"
+                            onClick={() => handleDuplicateItem(item)}
+                            aria-label={`Duplicate ${item.name}`}
+                          >
+                            <Copy className="h-4 w-4" />
                           </button>
                           <ConfirmDialog
                             title="Delete item?"
@@ -584,11 +672,16 @@ export default function ManagePage() {
         open={showItemForm}
         onOpenChange={(open) => {
           setShowItemForm(open);
-          if (!open) setTimeout(() => setEditingItem(undefined), 200);
+          if (!open) {
+            setTimeout(() => {
+              setEditingItem(undefined);
+              setDuplicatingItem(undefined);
+            }, 200);
+          }
         }}
         onSubmit={handleSaveItem}
         folders={folders}
-        initialData={editingItem}
+        initialData={editingItem ?? duplicatingItem ?? undefined}
         defaultFolderId={defaultFolderId}
         defaultDate={defaultItemDate}
       />
