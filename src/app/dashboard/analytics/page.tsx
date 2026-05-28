@@ -13,6 +13,7 @@ import {
 import { Money, formatPKR } from "@/components/ui/money";
 import { DonutChart } from "@/components/charts/donut-chart";
 import { BarChart } from "@/components/charts/bar-chart";
+import { ForecastWidget } from "@/components/analytics/forecast-widget";
 import { SkeletonCard } from "@/components/ui/skeleton-card";
 import { PeriodSelector } from "@/components/nav/period-selector";
 import { ExportLink } from "@/components/export/export-report-actions";
@@ -294,7 +295,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
         <div className="card-base" style={{ padding: 24 }}>
           <h2 className="text-base font-semibold mb-6" style={{ color: "var(--text-primary)" }}>
             Spending by Category
@@ -302,24 +303,26 @@ export default function AnalyticsPage() {
           {donutData.length > 0 ? (
             <DonutChart data={donutData} />
           ) : (
-            <div className="flex items-center justify-center h-[300px] text-sm" style={{ color: "var(--text-muted)" }}>
+            <div className="flex h-[300px] items-center justify-center text-sm text-[var(--text-muted)]">
               No data for this period
             </div>
           )}
         </div>
 
-        <div className="card-base" style={{ padding: 24 }}>
-          <h2 className="text-base font-semibold mb-6" style={{ color: "var(--text-primary)" }}>
-            6-Month Trend
-          </h2>
-          {allCategories.length > 0 ? (
-            <BarChart data={barChartData} categories={allCategories} />
-          ) : (
-            <div className="flex items-center justify-center h-[350px] text-sm" style={{ color: "var(--text-muted)" }}>
-              No data available
-            </div>
-          )}
-        </div>
+        <ForecastWidget historicalData={monthlyTrend} />
+      </div>
+
+      <div className="card-base mb-8" style={{ padding: 24 }}>
+        <h2 className="text-base font-semibold mb-6" style={{ color: "var(--text-primary)" }}>
+          6-Month Trend
+        </h2>
+        {allCategories.length > 0 ? (
+          <BarChart data={barChartData} categories={allCategories} />
+        ) : (
+          <div className="flex h-[350px] items-center justify-center text-sm text-[var(--text-muted)]">
+            No data available
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[0.9fr_1.1fr] gap-4">

@@ -42,6 +42,7 @@ export async function getItemsByFolder(
     total: Number(item.total),
     date: String(item.date),
     note: item.note ? String(item.note) : null,
+    tags: Array.isArray(item.tags) ? item.tags.map(String) : [],
     created_at: String(item.created_at),
   }));
 }
@@ -67,6 +68,7 @@ export async function createItem(userId: string, data: CreateItemData): Promise<
     total: Number(item.total),
     date: String(item.date),
     note: item.note ? String(item.note) : null,
+    tags: Array.isArray(item.tags) ? item.tags.map(String) : [],
     created_at: String(item.created_at),
   };
 }
@@ -93,6 +95,7 @@ export async function updateItem(itemId: string, data: UpdateItemData): Promise<
     total: Number(item.total),
     date: String(item.date),
     note: item.note ? String(item.note) : null,
+    tags: Array.isArray(item.tags) ? item.tags.map(String) : [],
     created_at: String(item.created_at),
   };
 }
@@ -408,6 +411,7 @@ interface RawExpensiveItem {
   total: number | string;
   date: string;
   note: string | null;
+  tags?: string[];
   created_at: string;
   folders: {
     name: string;
@@ -431,6 +435,7 @@ function mapItemWithFolder(item: RawExpensiveItem): ItemWithFolder {
     total: Number(item.total),
     date: String(item.date),
     note: item.note ? String(item.note) : null,
+    tags: Array.isArray(item.tags) ? item.tags.map(String) : [],
     created_at: String(item.created_at),
     folder_name: folder ? String(folder.name) : "Unknown",
     folder_icon: folder ? String(folder.icon) : "🗂️",

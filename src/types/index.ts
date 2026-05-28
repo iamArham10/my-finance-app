@@ -26,12 +26,14 @@ export interface Item {
   total: number;
   date: string;
   note: string | null;
+  tags: string[];
   created_at: string;
 }
 
 export interface FolderWithStats extends Folder {
   item_count: number;
   monthly_total: number;
+  sparkline_data: number[];
 }
 
 export interface DateRange {
@@ -86,6 +88,7 @@ export interface CreateItemData {
   unit: string;
   date: string;
   note?: string;
+  tags?: string[];
 }
 
 export interface UpdateItemData {
@@ -95,6 +98,7 @@ export interface UpdateItemData {
   unit?: string;
   date?: string;
   note?: string | null;
+  tags?: string[];
 }
 
 export type RecurringFrequency = "daily" | "weekly" | "monthly" | "yearly";

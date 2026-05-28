@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Money, formatPKR } from "@/components/ui/money";
 import { BudgetBar } from "@/components/ui/budget-bar";
+import { Sparkline } from "@/components/ui/sparkline";
 import type { FolderWithStats } from "@/types";
 
 interface FolderCardProps {
@@ -41,11 +42,14 @@ export function FolderCard({ folder, queryString }: FolderCardProps) {
           </span>
         </div>
 
-        <div className="mb-3" style={{ color: "var(--accent)" }}>
+        <div className="mb-3 flex items-end justify-between text-[var(--accent)]">
           <Money
             amount={folder.monthly_total}
             className="text-xl font-semibold"
           />
+          {folder.sparkline_data && (
+            <Sparkline data={folder.sparkline_data} className="h-8 w-16" />
+          )}
         </div>
 
         {folder.budget_limit && folder.budget_limit > 0 && (

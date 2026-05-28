@@ -49,28 +49,64 @@ export async function getFoldersWithStats(
 
   if (error) throw error;
 
+  // Also fetch last 7 days for sparklines
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+  const sparklineStart = sevenDaysAgo.toISOString().split("T")[0];
+  
+  const { data: sparklineRawData, error: sparklineError } = await supabase
+    .from("items")
+    .select("folder_id,total,date")
+    .eq("user_id", userId)
+    .gte("date", sparklineStart);
+
+  if (sparklineError) throw sparklineError;
+
   const statsByFolder = new Map<
     string,
-    { item_count: number; monthly_total: number }
+    { item_count: number; monthly_total: number; sparkline_data: number[] }
   >();
+
+  // Pre-fill sparkline arrays
+  const last7DaysDates = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    return d.toISOString().split("T")[0];
+  });
+
+  for (const folder of folders) {
+    statsByFolder.set(folder.id, {
+      item_count: 0,
+      monthly_total: 0,
+      sparkline_data: Array(7).fill(0),
+    });
+  }
 
   for (const item of data ?? []) {
     const folderId = String(item.folder_id);
-    const stats = statsByFolder.get(folderId) ?? {
-      item_count: 0,
-      monthly_total: 0,
-    };
+    const stats = statsByFolder.get(folderId);
+    if (!stats) continue;
 
     stats.item_count += 1;
     stats.monthly_total += Number(item.total) || 0;
+  }
 
-    statsByFolder.set(folderId, stats);
+  for (const item of sparklineRawData ?? []) {
+    const folderId = String(item.folder_id);
+    const stats = statsByFolder.get(folderId);
+    if (!stats) continue;
+
+    const dateIndex = last7DaysDates.indexOf(item.date);
+    if (dateIndex !== -1) {
+      stats.sparkline_data[dateIndex] += Number(item.total) || 0;
+    }
   }
 
   return folders.map((folder) => ({
     ...folder,
     item_count: statsByFolder.get(folder.id)?.item_count ?? 0,
     monthly_total: statsByFolder.get(folder.id)?.monthly_total ?? 0,
+    sparkline_data: statsByFolder.get(folder.id)?.sparkline_data ?? Array(7).fill(0),
   }));
 }
 

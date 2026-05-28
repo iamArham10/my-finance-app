@@ -91,6 +91,8 @@ function ItemFormFields({
     initialData?.date ?? defaultDate ?? new Date().toISOString().split("T")[0]
   );
   const [note, setNote] = useState(initialData?.note ?? "");
+  const [tags, setTags] = useState<string[]>(initialData?.tags ?? []);
+  const [tagInput, setTagInput] = useState("");
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -141,6 +143,7 @@ function ItemFormFields({
         unit: finalUnit,
         date,
         note: note.trim() || undefined,
+        tags: tags.length > 0 ? tags : undefined,
       };
       if (folders) {
         payload.folder_id = folderId;
@@ -343,6 +346,44 @@ function ItemFormFields({
               placeholder="Add details..."
               rows={2}
               className={`${fieldClass} min-h-20 py-2`}
+            />
+          </div>
+
+          <div>
+            <label className={labelClass}>Tags</label>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {tags.map((tag, index) => (
+                <span
+                  key={index}
+                  className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-light)] px-2.5 py-0.5 text-xs font-medium text-[var(--accent-text)]"
+                >
+                  {tag}
+                  <button
+                    type="button"
+                    onClick={() => setTags(tags.filter((_, i) => i !== index))}
+                    className="ml-0.5 text-[var(--accent-text)] hover:text-black dark:hover:text-white"
+                  >
+                    &times;
+                  </button>
+                </span>
+              ))}
+            </div>
+            <input
+              type="text"
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === ",") {
+                  e.preventDefault();
+                  const newTag = tagInput.trim().toLowerCase();
+                  if (newTag && !tags.includes(newTag)) {
+                    setTags([...tags, newTag]);
+                    setTagInput("");
+                  }
+                }
+              }}
+              placeholder="Type a tag and press Enter"
+              className={fieldClass}
             />
           </div>
 
