@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
   createFolder,
@@ -64,6 +65,7 @@ export default function ManagePage() {
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [defaultFolderId, setDefaultFolderId] = useState<string | undefined>();
   const { range, setRange } = useDateRangeParams();
+  const router = useRouter();
 
   const supabase = useMemo(() => createClient(), []);
   const periodLabel = useMemo(() => getRangeLabel(range), [range]);
@@ -317,7 +319,7 @@ export default function ManagePage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(420px,0.95fr)_minmax(0,1.05fr)]">
+      <div className="flex flex-col gap-6">
         <section className="card-base" style={{ padding: 24 }}>
           <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -356,46 +358,38 @@ export default function ManagePage() {
               </p>
             </div>
           ) : (
-            <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-surface)]">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 max-h-[600px] overflow-y-auto pr-2 pb-2">
               {filteredFolders.map((folder) => (
                 <div
                   key={folder.id}
-                  className="group border-b border-[var(--border)] p-4 transition-colors last:border-b-0 hover:bg-[var(--bg-elevated)]"
+                  onClick={(e) => {
+                    const target = e.target as HTMLElement;
+                    if (target.closest('button, input, a')) return;
+                    router.push(`/dashboard/folders/${folder.id}?${rangeQueryString}`);
+                  }}
+                  className="group relative flex flex-col justify-between rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-4 transition-colors hover:border-[var(--border-focus)] hover:bg-[var(--bg-elevated)] cursor-pointer"
                 >
-                  <div className="grid grid-cols-[44px_minmax(0,1fr)] gap-3 sm:grid-cols-[48px_minmax(0,1fr)_auto] sm:items-start">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--bg-page)] text-2xl sm:h-12 sm:w-12">
-                      {folder.icon}
-                    </div>
-
-                    <Link
-                      href={`/dashboard/folders/${folder.id}?${rangeQueryString}`}
-                      className="min-w-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
-                    >
-                      <span className="block min-w-0">
-                        <span className="block break-words text-sm font-semibold leading-snug text-[var(--text-primary)]">
-                          {folder.name}
-                        </span>
-                        <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[var(--text-muted)]">
-                          <span>{folder.item_count} items</span>
-                          <span className="hidden text-[var(--border)] sm:inline">
-                            /
-                          </span>
-                          <span className="mono">
-                            {formatPKR(folder.monthly_total)}
-                          </span>
-                        </span>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--bg-page)] text-xl" role="img" aria-label={folder.name}>
+                        {folder.icon}
                       </span>
-                    </Link>
-
-                    <div className="col-span-2 mt-3 flex items-center justify-between gap-2 sm:col-span-1 sm:mt-0 sm:justify-end">
-                      <Link
-                        href={`/dashboard/folders/${folder.id}?${rangeQueryString}`}
-                        className="btn-ghost h-8 px-2 text-xs sm:hidden"
+                      <span
+                        className="font-semibold text-[var(--text-primary)] group-hover:underline text-[15px]"
                       >
-                        Open
-                        <ArrowRight className="h-3.5 w-3.5" />
-                      </Link>
-                      <div className="flex items-center gap-1">
+                        {folder.name}
+                      </span>
+                    </div>
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-[var(--bg-elevated)] text-[var(--text-muted)] font-medium">
+                      {folder.item_count} items
+                    </span>
+                  </div>
+
+                  <div className="mb-4 flex items-end justify-between">
+                    <div className="text-[var(--accent)] text-xl font-semibold mono">
+                      {formatPKR(folder.monthly_total)}
+                    </div>
+                    <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                       <button
                         className="flex h-8 w-8 items-center justify-center rounded-md text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-surface)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
                         onClick={() => openNewItem(folder.id)}
@@ -430,12 +424,11 @@ export default function ManagePage() {
                           </button>
                         }
                       />
-                      </div>
                     </div>
                   </div>
 
                   {folder.budget_limit && folder.budget_limit > 0 && (
-                    <div className="mt-4 pl-0 sm:pl-[60px]">
+                    <div className="mt-auto">
                       <div className="mb-1.5 flex items-center justify-between gap-3 text-xs">
                         <span className="text-[var(--text-muted)]">
                           Budget
@@ -488,51 +481,73 @@ export default function ManagePage() {
             </div>
           )}
 
-          <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h2 className="text-base font-semibold text-[var(--text-primary)]">
-                Items
-              </h2>
-              <p className="text-sm text-[var(--text-muted)]">
-                Manage expenses across every folder
-              </p>
+          <div className="mb-5 flex flex-col gap-4">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h2 className="text-base font-semibold text-[var(--text-primary)]">
+                  Items
+                </h2>
+                <p className="text-sm text-[var(--text-muted)]">
+                  Manage expenses across every folder
+                </p>
+              </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_180px]">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
+                  <input
+                    type="search"
+                    value={itemQuery}
+                    onChange={(event) => setItemQuery(event.target.value)}
+                    placeholder="Search items"
+                    className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] pl-9 pr-3 text-sm"
+                  />
+                </div>
+                <div className="relative">
+                  <ListFilter className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
+                  <select
+                    value={folderFilter}
+                    onChange={(event) => setFolderFilter(event.target.value)}
+                    className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] pl-9 pr-3 text-sm"
+                    aria-label="Filter items by folder"
+                  >
+                    <option value={ALL_FOLDERS}>All folders</option>
+                    {folders.map((folder) => (
+                      <option key={folder.id} value={folder.id}>
+                        {folder.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_180px]">
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
+
+            {filteredItems.length > 0 && (
+              <div className="flex items-center pb-2 border-b border-[var(--border)]">
                 <input
-                  type="search"
-                  value={itemQuery}
-                  onChange={(event) => setItemQuery(event.target.value)}
-                  placeholder="Search items"
-                  className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] pl-9 pr-3 text-sm"
+                  type="checkbox"
+                  checked={selectedItems.size > 0 && selectedItems.size === filteredItems.length}
+                  ref={input => {
+                    if (input) {
+                      input.indeterminate = selectedItems.size > 0 && selectedItems.size < filteredItems.length;
+                    }
+                  }}
+                  onChange={toggleSelectAll}
+                  className="rounded border-[var(--border)] text-[var(--accent)] focus:ring-[var(--accent)]"
+                  id="select-all-items"
                 />
+                <label htmlFor="select-all-items" className="ml-2 text-sm text-[var(--text-secondary)] font-medium cursor-pointer">
+                  Select All
+                </label>
               </div>
-              <div className="relative">
-                <ListFilter className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
-                <select
-                  value={folderFilter}
-                  onChange={(event) => setFolderFilter(event.target.value)}
-                  className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] pl-9 pr-3 text-sm"
-                  aria-label="Filter items by folder"
-                >
-                  <option value={ALL_FOLDERS}>All folders</option>
-                  {folders.map((folder) => (
-                    <option key={folder.id} value={folder.id}>
-                      {folder.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+            )}
           </div>
 
           {loading ? (
-            <div className="space-y-3">
-              {Array.from({ length: 6 }).map((_, index) => (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {Array.from({ length: 8 }).map((_, index) => (
                 <div
                   key={index}
-                  className="h-14 animate-pulse rounded-lg bg-[var(--bg-elevated)]"
+                  className="h-40 animate-pulse rounded-xl bg-[var(--bg-elevated)]"
                 />
               ))}
             </div>
@@ -547,111 +562,95 @@ export default function ManagePage() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[720px] border-collapse text-left">
-                <thead>
-                  <tr className="border-b border-[var(--border)] text-[12px] uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    <th className="px-2 py-3 w-10">
-                      <input
-                        type="checkbox"
-                        checked={selectedItems.size > 0 && selectedItems.size === filteredItems.length}
-                        ref={input => {
-                          if (input) {
-                            input.indeterminate = selectedItems.size > 0 && selectedItems.size < filteredItems.length;
-                          }
-                        }}
-                        onChange={toggleSelectAll}
-                        className="rounded border-[var(--border)] text-[var(--accent)] focus:ring-[var(--accent)]"
-                      />
-                    </th>
-                    <th className="px-2 py-3">Date</th>
-                    <th className="px-2 py-3">Item</th>
-                    <th className="px-2 py-3">Folder</th>
-                    <th className="px-2 py-3">Qty</th>
-                    <th className="px-2 py-3 text-right">Total</th>
-                    <th className="w-[86px] px-2 py-3" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredItems.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="group border-b border-[var(--border)] transition-colors hover:bg-[var(--bg-elevated)]"
-                      style={{ height: 52 }}
-                    >
-                      <td className="px-2 w-10">
-                        <input
-                          type="checkbox"
-                          checked={selectedItems.has(item.id)}
-                          onChange={() => toggleSelect(item.id)}
-                          className="rounded border-[var(--border)] text-[var(--accent)] focus:ring-[var(--accent)]"
-                        />
-                      </td>
-                      <td className="px-2 text-sm text-[var(--text-secondary)]">
-                        {new Date(item.date).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </td>
-                      <td className="px-2">
-                        <p className="font-medium text-[var(--text-primary)]">
-                          {item.name}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 max-h-[600px] overflow-y-auto pr-2 pb-2">
+              {filteredItems.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={(e) => {
+                    const target = e.target as HTMLElement;
+                    if (target.closest('button, input, a')) return;
+                    router.push(`/dashboard/folders/${item.folder_id}?${rangeQueryString}`);
+                  }}
+                  className={`group relative flex flex-col justify-between rounded-xl border p-4 transition-colors hover:bg-[var(--bg-elevated)] cursor-pointer ${selectedItems.has(item.id) ? 'border-[var(--accent)] bg-[var(--accent-light)]' : 'border-[var(--border)] bg-[var(--bg-surface)]'}`}
+                >
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-[var(--text-primary)] text-[15px] truncate group-hover:underline">
+                        {item.name}
+                      </p>
+                      {item.note && (
+                        <p className="mt-1 line-clamp-2 text-xs text-[var(--text-muted)]">
+                          {item.note}
                         </p>
-                        {item.note && (
-                          <p className="max-w-[260px] truncate text-xs text-[var(--text-muted)]">
-                            {item.note}
-                          </p>
-                        )}
-                      </td>
-                      <td className="px-2 text-sm text-[var(--text-secondary)]">
-                        <span className="mr-1">{item.folder_icon}</span>
-                        {item.folder_name}
-                      </td>
-                      <td className="px-2 text-sm text-[var(--text-secondary)]">
-                        {item.quantity} {item.unit}
-                      </td>
-                      <td className="mono px-2 text-right text-sm font-semibold text-[var(--accent)]">
+                      )}
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={selectedItems.has(item.id)}
+                      onChange={() => toggleSelect(item.id)}
+                      className="rounded border-[var(--border)] text-[var(--accent)] focus:ring-[var(--accent)] flex-shrink-0"
+                    />
+                  </div>
+
+                  <div className="mt-2 flex items-center justify-between text-xs text-[var(--text-secondary)]">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="flex-shrink-0">{item.folder_icon}</span>
+                      <span className="truncate">{item.folder_name}</span>
+                    </div>
+                    <div className="flex-shrink-0 whitespace-nowrap ml-2">
+                      {new Date(item.date).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex items-end justify-between">
+                    <div className="min-w-0">
+                      <p className="text-xs text-[var(--text-muted)] mb-0.5">
+                        {item.quantity > 1 ? `${item.quantity} ${item.unit}` : 'Total'}
+                      </p>
+                      <p className="mono font-semibold text-[var(--accent)] text-lg truncate">
                         {formatPKR(item.total)}
-                      </td>
-                      <td className="px-2">
-                        <div className="flex items-center justify-end gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 flex-shrink-0">
+                      <button
+                        className="flex h-8 w-8 items-center justify-center rounded-md text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-surface)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
+                        onClick={() => {
+                          setEditingItem(item);
+                          setShowItemForm(true);
+                        }}
+                        aria-label={`Edit ${item.name}`}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        className="flex h-8 w-8 items-center justify-center rounded-md text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-surface)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
+                        onClick={() => handleDuplicateItem(item)}
+                        aria-label={`Duplicate ${item.name}`}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </button>
+                      <ConfirmDialog
+                        title="Delete item?"
+                        description={`Delete "${item.name}"? This cannot be undone.`}
+                        confirmLabel="Delete"
+                        onConfirm={() => handleDeleteItem(item.id)}
+                        trigger={
                           <button
-                            className="rounded p-1.5 text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-surface)] hover:text-[var(--text-primary)]"
-                            onClick={() => {
-                              setEditingItem(item);
-                              setShowItemForm(true);
-                            }}
-                            aria-label={`Edit ${item.name}`}
+                            className="flex h-8 w-8 items-center justify-center rounded-md text-[var(--text-secondary)] transition-colors hover:bg-[var(--danger-bg)] hover:text-[var(--danger)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
+                            aria-label={`Delete ${item.name}`}
                           >
-                            <Pencil className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4" />
                           </button>
-                          <button
-                            className="rounded p-1.5 text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface)] hover:text-[var(--text-primary)]"
-                            onClick={() => handleDuplicateItem(item)}
-                            aria-label={`Duplicate ${item.name}`}
-                          >
-                            <Copy className="h-4 w-4" />
-                          </button>
-                          <ConfirmDialog
-                            title="Delete item?"
-                            description={`Delete "${item.name}"? This cannot be undone.`}
-                            confirmLabel="Delete"
-                            onConfirm={() => handleDeleteItem(item.id)}
-                            trigger={
-                              <button
-                                className="rounded p-1.5 text-[var(--text-secondary)] transition-colors hover:bg-[var(--danger-bg)] hover:text-[var(--danger)]"
-                                aria-label={`Delete ${item.name}`}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            }
-                          />
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </section>

@@ -5,6 +5,7 @@ import {
   useContext,
   useState,
   useMemo,
+  useCallback,
   type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
@@ -40,7 +41,7 @@ export function KeyboardShortcutsProvider({ children }: { children: ReactNode })
   // Registry of all active shortcuts to display in the help modal
   const [registry, setRegistry] = useState<ShortcutMapping[]>([]);
 
-  const registerGlobalShortcuts = (newShortcuts: ShortcutMapping[]) => {
+  const registerGlobalShortcuts = useCallback((newShortcuts: ShortcutMapping[]) => {
     setRegistry((prev) => {
       const merged = [...prev];
       for (const s of newShortcuts) {
@@ -50,7 +51,7 @@ export function KeyboardShortcutsProvider({ children }: { children: ReactNode })
       }
       return merged;
     });
-  };
+  }, []);
 
   const defaultShortcuts: ShortcutMapping[] = useMemo(
     () => [

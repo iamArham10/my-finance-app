@@ -3,7 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getFolderById, getFoldersWithStats } from "@/lib/supabase/folders";
 import { getReportItems } from "@/lib/supabase/items";
 import { ExportReportActions } from "@/components/export/export-report-actions";
-import { formatPKR } from "@/components/ui/money";
+import { formatCurrency, DEFAULT_CURRENCY } from "@/lib/currencies";
+const formatPKR = (amount: number) => formatCurrency(Math.abs(amount), DEFAULT_CURRENCY);
 import { getRangeFromSearch, getRangeLabel } from "@/lib/date-range";
 import type { DateRange, FolderWithStats, ItemWithFolder } from "@/types";
 
