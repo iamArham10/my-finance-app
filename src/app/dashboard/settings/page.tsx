@@ -3,13 +3,15 @@
 import { useEffect, useState, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { ThemeToggle } from "@/components/nav/theme-toggle";
-import { Loader2, User, Palette, Shield, AlertTriangle, Coins } from "lucide-react";
+import { Loader2, User, Palette, Shield, AlertTriangle, Coins, Database } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useRouter } from "next/navigation";
 import { deleteUserAccount } from "@/lib/supabase/auth-actions";
 import { useCurrency } from "@/components/currency-provider";
 import { CURRENCIES } from "@/lib/currencies";
+import { CSVImportModal } from "@/components/export/csv-import-modal";
+
 
 export default function SettingsPage() {
   const supabase = useMemo(() => createClient(), []);
@@ -18,6 +20,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [showImport, setShowImport] = useState(false);
   
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -220,6 +223,32 @@ export default function SettingsPage() {
           </div>
         </section>
 
+        {/* Data Management Section */}
+        <section className="card-base" style={{ padding: 32 }}>
+          <div className="flex items-center gap-3 mb-6">
+            <Database className="w-5 h-5" style={{ color: "var(--accent)" }} />
+            <h2 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
+              Data Management
+            </h2>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <p className="font-medium" style={{ color: "var(--text-primary)" }}>Import Data</p>
+              <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+                Upload a CSV file to bulk import your expenses
+              </p>
+            </div>
+            <button
+              onClick={() => setShowImport(true)}
+              className="btn-ghost shrink-0"
+              style={{ border: "1px solid var(--border)" }}
+            >
+              Import CSV
+            </button>
+          </div>
+        </section>
+
         {/* Danger Zone */}
         <section className="card-base" style={{ padding: 32, borderColor: "var(--danger-bg)" }}>
           <div className="flex items-center gap-3 mb-6">
@@ -250,6 +279,15 @@ export default function SettingsPage() {
           </div>
         </section>
       </div>
+
+      <CSVImportModal 
+        open={showImport} 
+        onOpenChange={setShowImport} 
+        onSuccess={() => {
+          // Soft refresh by reloading the page state
+          router.refresh();
+        }} 
+      />
     </div>
   );
 }

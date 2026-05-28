@@ -56,7 +56,7 @@ export default async function ExportPage({
 
   return (
     <main className="min-h-screen bg-white px-6 py-10 text-slate-950 print:px-0 print:py-0">
-      <ExportReportActions />
+      <ExportReportActions items={items} />
       <article className="mx-auto max-w-[980px] rounded-lg border border-slate-200 bg-white p-8 shadow-sm print:max-w-none print:border-0 print:p-0 print:shadow-none">
         <ReportHeader
           title={title}
