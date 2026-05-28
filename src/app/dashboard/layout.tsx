@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/nav/dashboard-shell";
 import { CurrencyProvider } from "@/components/currency-provider";
+import { KeyboardShortcutsProvider } from "@/components/keyboard-shortcuts-provider";
 import { Toaster } from "sonner";
 
 export default async function DashboardLayout({
@@ -28,7 +29,7 @@ export default async function DashboardLayout({
   const userEmail = profile?.email || user.email || "";
 
   return (
-    <>
+    <KeyboardShortcutsProvider>
       <CurrencyProvider>
         <DashboardShell userName={userName} userEmail={userEmail}>
           {children}
@@ -44,6 +45,6 @@ export default async function DashboardLayout({
           },
         }}
       />
-    </>
+      </KeyboardShortcutsProvider>
   );
 }
