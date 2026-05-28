@@ -26,6 +26,7 @@ export async function getFolders(userId: string): Promise<Folder[]> {
     name: String(item.name),
     icon: String(item.icon),
     budget_limit: item.budget_limit ? Number(item.budget_limit) : null,
+    rollover_enabled: Boolean(item.rollover_enabled),
     created_at: String(item.created_at),
   }));
 }
@@ -89,6 +90,7 @@ export async function getFolderById(folderId: string): Promise<Folder | null> {
     name: String(data.name),
     icon: String(data.icon),
     budget_limit: data.budget_limit ? Number(data.budget_limit) : null,
+    rollover_enabled: Boolean(data.rollover_enabled),
     created_at: String(data.created_at),
   };
 }
@@ -109,6 +111,7 @@ export async function createFolder(userId: string, data: CreateFolderData): Prom
     name: String(folder.name),
     icon: String(folder.icon),
     budget_limit: folder.budget_limit ? Number(folder.budget_limit) : null,
+    rollover_enabled: Boolean(folder.rollover_enabled),
     created_at: String(folder.created_at),
   };
 }
@@ -130,6 +133,7 @@ export async function updateFolder(folderId: string, data: UpdateFolderData): Pr
     name: String(folder.name),
     icon: String(folder.icon),
     budget_limit: folder.budget_limit ? Number(folder.budget_limit) : null,
+    rollover_enabled: Boolean(folder.rollover_enabled),
     created_at: String(folder.created_at),
   };
 }

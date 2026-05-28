@@ -11,6 +11,7 @@ export interface Folder {
   name: string;
   icon: string;
   budget_limit: number | null;
+  rollover_enabled: boolean;
   created_at: string;
 }
 
@@ -68,6 +69,7 @@ export interface CreateFolderData {
   name: string;
   icon: string;
   budget_limit: number | null;
+  rollover_enabled?: boolean;
 }
 
 export interface UpdateFolderData {
@@ -93,4 +95,55 @@ export interface UpdateItemData {
   unit?: string;
   date?: string;
   note?: string | null;
+}
+
+export type RecurringFrequency = "daily" | "weekly" | "monthly" | "yearly";
+
+export interface RecurringTransaction {
+  id: string;
+  user_id: string;
+  folder_id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  unit: string;
+  note: string | null;
+  frequency: RecurringFrequency;
+  next_due_date: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface CreateRecurringData {
+  folder_id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  unit: string;
+  note?: string;
+  frequency: RecurringFrequency;
+  next_due_date: string;
+}
+
+export interface SavingsGoal {
+  id: string;
+  user_id: string;
+  name: string;
+  icon: string;
+  target_amount: number;
+  current_amount: number;
+  deadline: string | null;
+  created_at: string;
+}
+
+export interface CreateSavingsGoalData {
+  name: string;
+  icon: string;
+  target_amount: number;
+  deadline?: string;
+}
+
+export interface RecurringWithFolder extends RecurringTransaction {
+  folder_name: string;
+  folder_icon: string;
 }

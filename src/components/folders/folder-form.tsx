@@ -8,14 +8,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Loader2, Search } from "lucide-react";
-import type { CreateFolderData } from "@/types";
+import type { CreateFolderData, Folder } from "@/types";
 import { EMOJI_CATEGORIES, EMOJI_OPTIONS } from "./emoji-options";
 
 interface FolderFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: CreateFolderData) => Promise<void>;
-  initialData?: { name: string; icon: string; budget_limit: number | null };
+  initialData?: { name: string; icon: string; budget_limit: number | null; rollover_enabled?: boolean };
   title?: string;
 }
 
@@ -35,6 +35,9 @@ export function FolderForm({
   const [error, setError] = useState("");
   const [iconSearch, setIconSearch] = useState("");
   const [iconCategory, setIconCategory] = useState("All");
+  const [rolloverEnabled, setRolloverEnabled] = useState(
+    initialData?.rollover_enabled ?? false
+  );
 
   const filteredEmojiOptions = useMemo(() => {
     const query = iconSearch.trim().toLowerCase();
@@ -73,6 +76,7 @@ export function FolderForm({
         name: name.trim(),
         icon,
         budget_limit: budgetLimit ? parseFloat(budgetLimit) : null,
+        rollover_enabled: budgetLimit ? rolloverEnabled : false,
       });
       // Reset form
       if (!initialData) {
@@ -236,6 +240,29 @@ export function FolderForm({
               style={{ border: "1px solid var(--border)" }}
             />
           </div>
+
+          {/* Budget Rollover */}
+          {budgetLimit && (
+            <div className="flex items-center gap-3">
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={rolloverEnabled}
+                  onChange={(e) => setRolloverEnabled(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-9 h-5 bg-[var(--bg-elevated)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--accent)]" />
+              </label>
+              <div>
+                <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+                  Budget Rollover
+                </p>
+                <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                  Unspent budget carries over to the next month
+                </p>
+              </div>
+            </div>
+          )}
 
           {error && (
             <div

@@ -12,6 +12,8 @@ import { ExportLink } from "@/components/export/export-report-actions";
 import { useKeyboardShortcutsContext } from "@/components/keyboard-shortcuts-provider";
 import { Money, formatPKR } from "@/components/ui/money";
 import { BudgetBar } from "@/components/ui/budget-bar";
+import { SavingsGoalsWidget } from "@/components/savings/savings-goals-widget";
+import { RecurringWidget } from "@/components/recurring/recurring-widget";
 import { getRangeLabel, getRangeSearch } from "@/lib/date-range";
 import { useDateRangeParams } from "@/lib/use-date-range-params";
 import {
@@ -397,6 +399,12 @@ export default function DashboardPage() {
             </p>
           )}
         </div>
+      </div>
+
+      {/* Recurring & Savings */}
+      <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <RecurringWidget folders={folders} />
+        <SavingsGoalsWidget />
       </div>
 
       {/* Folder Grid */}
