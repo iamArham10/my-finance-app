@@ -6,8 +6,10 @@ import { getFoldersWithStats, createFolder } from "@/lib/supabase/folders";
 import { getMonthlyItemStats, getRecentItems } from "@/lib/supabase/items";
 import { FolderGrid } from "@/components/folders/folder-grid";
 import { FolderForm } from "@/components/folders/folder-form";
+import { ItemForm } from "@/components/items/item-form";
 import { PeriodSelector } from "@/components/nav/period-selector";
 import { ExportLink } from "@/components/export/export-report-actions";
+import { useKeyboardShortcutsContext } from "@/components/keyboard-shortcuts-provider";
 import { Money, formatPKR } from "@/components/ui/money";
 import { BudgetBar } from "@/components/ui/budget-bar";
 import { getRangeLabel, getRangeSearch } from "@/lib/date-range";
@@ -27,6 +29,7 @@ import type {
   FolderWithStats,
   ItemWithFolder,
   MonthlyItemStats,
+  CreateItemData,
 } from "@/types";
 
 const EMPTY_MONTHLY_STATS: MonthlyItemStats = {
@@ -45,8 +48,10 @@ export default function DashboardPage() {
   const [recentItems, setRecentItems] = useState<ItemWithFolder[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showItemModal, setShowItemModal] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const { range, setRange } = useDateRangeParams();
+  const { registerGlobalShortcuts } = useKeyboardShortcutsContext();
   
   const supabase = useMemo(() => createClient(), []);
   const rangeQueryString = useMemo(() => getRangeSearch(range), [range]);
@@ -87,10 +92,35 @@ export default function DashboardPage() {
     getUser();
   }, [supabase, loadFolders]);
 
+  useEffect(() => {
+    registerGlobalShortcuts([
+      {
+        key: "f",
+        description: "New Folder",
+        category: "Actions",
+        action: () => setShowCreateModal(true),
+      },
+      {
+        key: "c",
+        description: "New Item",
+        category: "Actions",
+        action: () => setShowItemModal(true),
+      },
+    ]);
+  }, [registerGlobalShortcuts]);
+
   const handleCreateFolder = async (data: CreateFolderData) => {
     if (!userId) return;
     await createFolder(userId, data);
     toast.success("Folder created!");
+    loadFolders(userId);
+  };
+
+  const handleCreateItem = async (data: CreateItemData) => {
+    if (!userId) return;
+    const { createItem } = await import("@/lib/supabase/items");
+    await createItem(userId, data);
+    toast.success("Item added!");
     loadFolders(userId);
   };
 
@@ -380,13 +410,23 @@ export default function DashboardPage() {
               Category totals for {periodLabel}
             </p>
           </div>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="btn-primary"
-          >
-            <Plus className="w-4 h-4" />
-            New Folder
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowItemModal(true)}
+              className="btn-ghost hidden sm:inline-flex"
+              disabled={folders.length === 0}
+            >
+              <Plus className="w-4 h-4" />
+              Add Item
+            </button>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="btn-primary"
+            >
+              <Plus className="w-4 h-4" />
+              New Folder
+            </button>
+          </div>
         </div>
 
         <FolderGrid
@@ -402,6 +442,13 @@ export default function DashboardPage() {
         open={showCreateModal}
         onOpenChange={setShowCreateModal}
         onSubmit={handleCreateFolder}
+      />
+
+      <ItemForm
+        open={showItemModal}
+        onOpenChange={setShowItemModal}
+        onSubmit={handleCreateItem}
+        folders={folders}
       />
     </div>
   );

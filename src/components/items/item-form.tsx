@@ -15,15 +15,17 @@ import {
   Package,
   ReceiptText,
   Tag,
+  FolderOpen,
 } from "lucide-react";
 import type { CreateItemData, Item } from "@/types";
 
 interface ItemFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: Omit<CreateItemData, "folder_id">) => Promise<void>;
+  onSubmit: (data: any) => Promise<void>;
   initialData?: Item;
   defaultDate?: string;
+  folders?: { id: string; name: string; icon?: string }[];
 }
 
 const UNIT_OPTIONS = ["litres", "kg", "pcs", "hours", "months"];
@@ -34,6 +36,7 @@ export function ItemForm({
   onSubmit,
   initialData,
   defaultDate,
+  folders,
 }: ItemFormProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -50,6 +53,7 @@ export function ItemForm({
           onSubmit={onSubmit}
           initialData={initialData}
           defaultDate={defaultDate}
+          folders={folders}
         />
       </SheetContent>
     </Sheet>
@@ -61,6 +65,7 @@ function ItemFormFields({
   onSubmit,
   initialData,
   defaultDate,
+  folders,
 }: Omit<ItemFormProps, "open">) {
   const initialUnit = initialData
     ? UNIT_OPTIONS.includes(initialData.unit)
@@ -69,6 +74,9 @@ function ItemFormFields({
     : "pcs";
 
   const [name, setName] = useState(initialData?.name ?? "");
+  const [folderId, setFolderId] = useState(
+    initialData?.folder_id ?? (folders && folders.length > 0 ? folders[0].id : "")
+  );
   const [price, setPrice] = useState(initialData?.price.toString() ?? "");
   const [quantity, setQuantity] = useState(
     initialData?.quantity.toString() ?? "1"
@@ -126,14 +134,18 @@ function ItemFormFields({
 
     setLoading(true);
     try {
-      await onSubmit({
+      const payload: any = {
         name: name.trim(),
         price: parsedPrice,
         quantity: parsedQuantity,
         unit: finalUnit,
         date,
         note: note.trim() || undefined,
-      });
+      };
+      if (folders) {
+        payload.folder_id = folderId;
+      }
+      await onSubmit(payload);
       onOpenChange(false);
     } catch {
       setError("Failed to save item. Please try again.");
@@ -276,6 +288,30 @@ function ItemFormFields({
             </div>
           </div>
 
+          {folders && (
+            <div>
+              <label htmlFor="item-folder" className={labelClass}>
+                Folder
+              </label>
+              <div className="relative">
+                <FolderOpen className={iconClass} />
+                <select
+                  id="item-folder"
+                  value={folderId}
+                  onChange={(e) => setFolderId(e.target.value)}
+                  className={fieldWithIconClass}
+                  required
+                >
+                  {folders.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.icon} {f.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+
           <div>
             <label htmlFor="item-date" className={labelClass}>
               Date
@@ -311,7 +347,7 @@ function ItemFormFields({
           </div>
 
           {error && (
-            <div className="text-sm rounded-lg px-3 py-2 text-[var(--danger)] bg-[var(--danger-bg)]">
+            <div className="mb-6 rounded-lg bg-[var(--danger-bg)] p-4 text-sm text-[var(--danger)]">
               {error}
             </div>
           )}
