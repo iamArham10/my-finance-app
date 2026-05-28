@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/nav/dashboard-shell";
+import { CurrencyProvider } from "@/components/currency-provider";
 import { Toaster } from "sonner";
 
 export default async function DashboardLayout({
@@ -28,9 +29,11 @@ export default async function DashboardLayout({
 
   return (
     <>
-      <DashboardShell userName={userName} userEmail={userEmail}>
-        {children}
-      </DashboardShell>
+      <CurrencyProvider>
+        <DashboardShell userName={userName} userEmail={userEmail}>
+          {children}
+        </DashboardShell>
+      </CurrencyProvider>
       <Toaster
         position="bottom-right"
         toastOptions={{

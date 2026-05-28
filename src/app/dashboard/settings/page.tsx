@@ -3,11 +3,13 @@
 import { useEffect, useState, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { ThemeToggle } from "@/components/nav/theme-toggle";
-import { Loader2, User, Palette, Shield, AlertTriangle } from "lucide-react";
+import { Loader2, User, Palette, Shield, AlertTriangle, Coins } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useRouter } from "next/navigation";
 import { deleteUserAccount } from "@/lib/supabase/auth-actions";
+import { useCurrency } from "@/components/currency-provider";
+import { CURRENCIES } from "@/lib/currencies";
 
 export default function SettingsPage() {
   const supabase = useMemo(() => createClient(), []);
@@ -189,6 +191,9 @@ export default function SettingsPage() {
           </div>
         </section>
 
+        {/* Currency Section */}
+        <CurrencySection />
+
         {/* Security Section */}
         <section className="card-base" style={{ padding: 32 }}>
           <div className="flex items-center gap-3 mb-6">
@@ -246,5 +251,44 @@ export default function SettingsPage() {
         </section>
       </div>
     </div>
+  );
+}
+
+function CurrencySection() {
+  const { currency, setCurrency } = useCurrency();
+
+  return (
+    <section className="card-base" style={{ padding: 32 }}>
+      <div className="flex items-center gap-3 mb-6">
+        <Coins className="w-5 h-5" style={{ color: "var(--accent)" }} />
+        <h2 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
+          Currency
+        </h2>
+      </div>
+
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <p className="font-medium" style={{ color: "var(--text-primary)" }}>Preferred Currency</p>
+          <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+            All amounts will be displayed in this currency
+          </p>
+        </div>
+        <select
+          value={currency}
+          onChange={(e) => {
+            setCurrency(e.target.value);
+            toast.success(`Currency changed to ${e.target.value}`);
+          }}
+          className="w-full sm:w-48 px-3"
+          style={{ height: 40 }}
+        >
+          {CURRENCIES.map((c) => (
+            <option key={c.code} value={c.code}>
+              {c.symbol} — {c.name}
+            </option>
+          ))}
+        </select>
+      </div>
+    </section>
   );
 }
