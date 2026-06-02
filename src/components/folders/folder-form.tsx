@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Loader2, Search } from "lucide-react";
-import type { CreateFolderData, Folder } from "@/types";
+import type { CreateFolderData } from "@/types";
 import { EMOJI_CATEGORIES, EMOJI_OPTIONS } from "./emoji-options";
 
 interface FolderFormProps {

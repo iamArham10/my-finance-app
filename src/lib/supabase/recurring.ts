@@ -1,16 +1,58 @@
 "use server";
 
-import { createClient } from "./server";
+import { updateTag } from "next/cache";
+import { createClient, createAdminClient } from "./server";
 import type {
   RecurringTransaction,
   RecurringWithFolder,
   CreateRecurringData,
 } from "@/types";
 
+type RecurringTransactionRow = {
+  id: string;
+  user_id: string;
+  folder_id: string;
+  name: string;
+  price: number | string;
+  quantity: number | string;
+  unit: string;
+  note: string | null;
+  frequency: RecurringTransaction["frequency"];
+  next_due_date: string;
+  is_active: boolean;
+  created_at: string;
+  folders?: {
+    name?: string | null;
+    icon?: string | null;
+  } | null;
+};
+
+async function getAuthenticatedUserId() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    throw new Error("You must be signed in to manage recurring transactions");
+  }
+
+  return { supabase, userId: user.id };
+}
+
+function invalidateRecurringTags(userId: string, folderIds: Array<string | null | undefined> = []) {
+  updateTag(`user:${userId}:summary`);
+  updateTag(`user:${userId}:items`);
+  for (const folderId of new Set(folderIds.filter(Boolean))) {
+    updateTag(`folder:${folderId}:items`);
+  }
+}
+
 export async function getRecurringTransactions(
   userId: string
 ): Promise<RecurringWithFolder[]> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("recurring_transactions")
     .select("*, folders(name, icon)")
@@ -20,7 +62,7 @@ export async function getRecurringTransactions(
   if (error) throw error;
   if (!data) return [];
 
-  return data.map((row: any) => ({
+  return (data as RecurringTransactionRow[]).map((row) => ({
     id: String(row.id),
     user_id: String(row.user_id),
     folder_id: String(row.folder_id),
@@ -39,10 +81,9 @@ export async function getRecurringTransactions(
 }
 
 export async function createRecurringTransaction(
-  userId: string,
   data: CreateRecurringData
 ): Promise<RecurringTransaction> {
-  const supabase = await createClient();
+  const { supabase, userId } = await getAuthenticatedUserId();
   const { data: row, error } = await supabase
     .from("recurring_transactions")
     .insert({ ...data, user_id: userId })
@@ -51,36 +92,41 @@ export async function createRecurringTransaction(
 
   if (error) throw error;
   if (!row) throw new Error("Failed to create recurring transaction");
+  invalidateRecurringTags(userId);
   return row as unknown as RecurringTransaction;
 }
 
 export async function deleteRecurringTransaction(id: string): Promise<void> {
-  const supabase = await createClient();
+  const { supabase, userId } = await getAuthenticatedUserId();
   const { error } = await supabase
     .from("recurring_transactions")
     .delete()
-    .eq("id", id);
+    .eq("id", id)
+    .eq("user_id", userId);
   if (error) throw error;
+  invalidateRecurringTags(userId);
 }
 
 export async function toggleRecurringActive(
   id: string,
   isActive: boolean
 ): Promise<void> {
-  const supabase = await createClient();
+  const { supabase, userId } = await getAuthenticatedUserId();
   const { error } = await supabase
     .from("recurring_transactions")
     .update({ is_active: isActive })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("user_id", userId);
   if (error) throw error;
+  invalidateRecurringTags(userId);
 }
 
 /**
  * Processes due recurring transactions by creating items for them
  * and advancing their next_due_date.
  */
-export async function processDueRecurring(userId: string): Promise<number> {
-  const supabase = await createClient();
+export async function processDueRecurring(): Promise<number> {
+  const { supabase, userId } = await getAuthenticatedUserId();
   const today = new Date().toISOString().split("T")[0];
 
   const { data: dueItems, error } = await supabase
@@ -94,6 +140,7 @@ export async function processDueRecurring(userId: string): Promise<number> {
   if (!dueItems || dueItems.length === 0) return 0;
 
   let processed = 0;
+  const affectedFolderIds: string[] = [];
 
   for (const rec of dueItems) {
     // Create the item
@@ -112,6 +159,7 @@ export async function processDueRecurring(userId: string): Promise<number> {
       console.error("Failed to insert recurring item:", insertError);
       continue;
     }
+    affectedFolderIds.push(String(rec.folder_id));
 
     // Advance next_due_date
     const nextDate = advanceDate(rec.next_due_date, rec.frequency);
@@ -121,6 +169,10 @@ export async function processDueRecurring(userId: string): Promise<number> {
       .eq("id", rec.id);
 
     processed++;
+  }
+
+  if (processed > 0) {
+    invalidateRecurringTags(userId, affectedFolderIds);
   }
 
   return processed;

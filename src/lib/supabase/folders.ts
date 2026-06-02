@@ -1,6 +1,7 @@
 "use server";
 
-import { createClient } from "./server";
+import { updateTag } from "next/cache";
+import { createClient, createAdminClient } from "./server";
 import { getMonthRange } from "@/lib/date-range";
 import type {
   Folder,
@@ -10,8 +11,31 @@ import type {
   DateRange,
 } from "@/types";
 
-export async function getFolders(userId: string): Promise<Folder[]> {
+function invalidateFolderTags(userId: string, folderId?: string) {
+  updateTag(`user:${userId}:folders`);
+  updateTag(`user:${userId}:items`);
+  updateTag(`user:${userId}:summary`);
+  if (folderId) {
+    updateTag(`folder:${folderId}:items`);
+  }
+}
+
+async function getAuthenticatedUserId() {
   const supabase = await createClient();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    throw new Error("You must be signed in to manage folders");
+  }
+
+  return { supabase, userId: user.id };
+}
+
+export async function getFolders(userId: string): Promise<Folder[]> {
+  const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("folders")
     .select("*")
@@ -35,14 +59,14 @@ export async function getFoldersWithStats(
   userId: string,
   range: DateRange = getMonthRange()
 ): Promise<FolderWithStats[]> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const folders = await getFolders(userId);
 
   if (folders.length === 0) return [];
 
   const { data, error } = await supabase
-    .from("items")
-    .select("folder_id,total")
+    .from("expense_daily_folder_totals")
+    .select("folder_id,total,item_count")
     .eq("user_id", userId)
     .gte("date", range.startDate)
     .lte("date", range.endDate);
@@ -55,7 +79,7 @@ export async function getFoldersWithStats(
   const sparklineStart = sevenDaysAgo.toISOString().split("T")[0];
   
   const { data: sparklineRawData, error: sparklineError } = await supabase
-    .from("items")
+    .from("expense_daily_folder_totals")
     .select("folder_id,total,date")
     .eq("user_id", userId)
     .gte("date", sparklineStart);
@@ -87,7 +111,7 @@ export async function getFoldersWithStats(
     const stats = statsByFolder.get(folderId);
     if (!stats) continue;
 
-    stats.item_count += 1;
+    stats.item_count += Number(item.item_count) || 0;
     stats.monthly_total += Number(item.total) || 0;
   }
 
@@ -111,7 +135,7 @@ export async function getFoldersWithStats(
 }
 
 export async function getFolderById(folderId: string): Promise<Folder | null> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("folders")
     .select("*")
@@ -131,8 +155,8 @@ export async function getFolderById(folderId: string): Promise<Folder | null> {
   };
 }
 
-export async function createFolder(userId: string, data: CreateFolderData): Promise<Folder> {
-  const supabase = await createClient();
+export async function createFolder(data: CreateFolderData): Promise<Folder> {
+  const { supabase, userId } = await getAuthenticatedUserId();
   const { data: folder, error } = await supabase
     .from("folders")
     .insert({ ...data, user_id: userId })
@@ -141,6 +165,7 @@ export async function createFolder(userId: string, data: CreateFolderData): Prom
 
   if (error) throw error;
   if (!folder) throw new Error("Failed to create folder");
+  invalidateFolderTags(userId, String(folder.id));
   return {
     id: String(folder.id),
     user_id: String(folder.user_id),
@@ -153,16 +178,18 @@ export async function createFolder(userId: string, data: CreateFolderData): Prom
 }
 
 export async function updateFolder(folderId: string, data: UpdateFolderData): Promise<Folder> {
-  const supabase = await createClient();
+  const { supabase, userId } = await getAuthenticatedUserId();
   const { data: folder, error } = await supabase
     .from("folders")
     .update(data)
     .eq("id", folderId)
+    .eq("user_id", userId)
     .select()
     .single();
 
   if (error) throw error;
   if (!folder) throw new Error("Failed to update folder");
+  invalidateFolderTags(userId, folderId);
   return {
     id: String(folder.id),
     user_id: String(folder.user_id),
@@ -175,23 +202,25 @@ export async function updateFolder(folderId: string, data: UpdateFolderData): Pr
 }
 
 export async function deleteFolder(folderId: string): Promise<void> {
-  const supabase = await createClient();
+  const { supabase, userId } = await getAuthenticatedUserId();
   const { error } = await supabase
     .from("folders")
     .delete()
-    .eq("id", folderId);
+    .eq("id", folderId)
+    .eq("user_id", userId);
 
   if (error) throw error;
+  invalidateFolderTags(userId, folderId);
 }
 
 export async function getFolderMonthlyTotal(
   folderId: string,
   range: DateRange = getMonthRange()
 ): Promise<number> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
-    .from("items")
+    .from("expense_daily_folder_totals")
     .select("total")
     .eq("folder_id", folderId)
     .gte("date", range.startDate)

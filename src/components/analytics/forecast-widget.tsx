@@ -18,30 +18,34 @@ interface ForecastWidgetProps {
   historicalData: MonthlyTrend[];
 }
 
+type ForecastPoint = {
+  month: string;
+  actual: number | null;
+  forecast: number | null;
+};
+
 export function ForecastWidget({ historicalData }: ForecastWidgetProps) {
   const forecastData = useMemo(() => {
     if (historicalData.length < 2) return [];
 
     // Simple 3-month moving average forecast
-    const data = historicalData.map((d) => ({
+    const data: ForecastPoint[] = historicalData.map((d) => ({
       month: d.month,
       actual: d.total,
-      forecast: null as number | null,
+      forecast: null,
     }));
 
-    let last3Totals = historicalData.slice(-3).map((d) => d.total);
+    const last3Totals = historicalData.slice(-3).map((d) => d.total);
     
     // Project 3 months ahead
     for (let i = 1; i <= 3; i++) {
       const avg = last3Totals.reduce((a, b) => a + b, 0) / last3Totals.length;
       
-      const lastDate = new Date(`${historicalData[historicalData.length - 1].month} 1, 2026`); // Hacky date parsing for month name
-      // Better approach for next month label:
       const nextMonthLabel = `+${i}M`;
 
       data.push({
         month: nextMonthLabel,
-        actual: null as any,
+        actual: null,
         forecast: Math.round(avg),
       });
 
@@ -120,7 +124,7 @@ export function ForecastWidget({ historicalData }: ForecastWidgetProps) {
                 boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
               }}
               itemStyle={{ color: "var(--text-primary)", fontSize: "14px" }}
-              formatter={(value: any) => formatPKR(Number(value))}
+              formatter={(value: any) => formatPKR(Number(value || 0))}
             />
             <Area
               type="monotone"

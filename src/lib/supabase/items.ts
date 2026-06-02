@@ -1,6 +1,7 @@
 "use server";
 
-import { createClient } from "./server";
+import { updateTag } from "next/cache";
+import { createClient, createAdminClient } from "./server";
 import { getMonthRange, getPreviousRange, parseIsoDate } from "@/lib/date-range";
 import type {
   Item,
@@ -13,11 +14,35 @@ import type {
   DateRange,
 } from "@/types";
 
+const DEFAULT_PAGE_SIZE = 100;
+
+function invalidateItemTags(userId: string, folderIds: Array<string | null | undefined> = []) {
+  updateTag(`user:${userId}:items`);
+  updateTag(`user:${userId}:summary`);
+  for (const folderId of new Set(folderIds.filter(Boolean))) {
+    updateTag(`folder:${folderId}:items`);
+  }
+}
+
+async function getAuthenticatedUserId() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    throw new Error("You must be signed in to manage items");
+  }
+
+  return { supabase, userId: user.id };
+}
+
 export async function getItemsByFolder(
   folderId: string,
   range?: DateRange
 ): Promise<Item[]> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   let query = supabase
     .from("items")
     .select("*")
@@ -47,8 +72,8 @@ export async function getItemsByFolder(
   }));
 }
 
-export async function createItem(userId: string, data: CreateItemData): Promise<Item> {
-  const supabase = await createClient();
+export async function createItem(data: CreateItemData): Promise<Item> {
+  const { supabase, userId } = await getAuthenticatedUserId();
   const { data: item, error } = await supabase
     .from("items")
     .insert({ ...data, user_id: userId })
@@ -57,6 +82,7 @@ export async function createItem(userId: string, data: CreateItemData): Promise<
 
   if (error) throw error;
   if (!item) throw new Error("Failed to create item");
+  invalidateItemTags(userId, [String(item.folder_id)]);
   return {
     id: String(item.id),
     folder_id: String(item.folder_id),
@@ -74,16 +100,27 @@ export async function createItem(userId: string, data: CreateItemData): Promise<
 }
 
 export async function updateItem(itemId: string, data: UpdateItemData): Promise<Item> {
-  const supabase = await createClient();
+  const { supabase, userId } = await getAuthenticatedUserId();
+  const { data: existing, error: existingError } = await supabase
+    .from("items")
+    .select("user_id, folder_id")
+    .eq("id", itemId)
+    .eq("user_id", userId)
+    .single();
+
+  if (existingError) throw existingError;
+
   const { data: item, error } = await supabase
     .from("items")
     .update(data)
     .eq("id", itemId)
+    .eq("user_id", userId)
     .select()
     .single();
 
   if (error) throw error;
   if (!item) throw new Error("Failed to update item");
+  invalidateItemTags(userId, [String(existing.folder_id), String(item.folder_id)]);
   return {
     id: String(item.id),
     folder_id: String(item.folder_id),
@@ -101,17 +138,28 @@ export async function updateItem(itemId: string, data: UpdateItemData): Promise<
 }
 
 export async function deleteItem(itemId: string): Promise<void> {
-  const supabase = await createClient();
+  const { supabase, userId } = await getAuthenticatedUserId();
+  const { data: existing, error: existingError } = await supabase
+    .from("items")
+    .select("user_id, folder_id")
+    .eq("id", itemId)
+    .eq("user_id", userId)
+    .single();
+
+  if (existingError) throw existingError;
+
   const { error } = await supabase
     .from("items")
     .delete()
-    .eq("id", itemId);
+    .eq("id", itemId)
+    .eq("user_id", userId);
 
   if (error) throw error;
+  invalidateItemTags(userId, [String(existing.folder_id)]);
 }
 
 export async function getItemCount(userId: string): Promise<number> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { count, error } = await supabase
     .from("items")
     .select("id", { count: "exact", head: true })
@@ -125,12 +173,12 @@ export async function getMonthlyItemStats(
   userId: string,
   range: DateRange = getMonthRange()
 ): Promise<MonthlyItemStats> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const previousRange = getPreviousRange(range);
 
   const { data, error } = await supabase
-    .from("items")
-    .select("total,date")
+    .from("expense_daily_folder_totals")
+    .select("total,item_count,date")
     .eq("user_id", userId)
     .gte("date", previousRange.startDate)
     .lte("date", range.endDate);
@@ -145,16 +193,17 @@ export async function getMonthlyItemStats(
   for (const item of data ?? []) {
     const itemDate = String(item.date);
     const total = Number(item.total) || 0;
+    const itemCount = Number(item.item_count) || 0;
 
     if (itemDate >= range.startDate && itemDate <= range.endDate) {
       currentTotal += total;
-      currentCount += 1;
+      currentCount += itemCount;
     } else if (
       itemDate >= previousRange.startDate &&
       itemDate <= previousRange.endDate
     ) {
       previousTotal += total;
-      previousCount += 1;
+      previousCount += itemCount;
     }
   }
 
@@ -172,7 +221,7 @@ export async function getRecentItems(
   limit = 5,
   range?: DateRange
 ): Promise<ItemWithFolder[]> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   let query = supabase
     .from("items")
     .select(`
@@ -205,7 +254,7 @@ export async function getItemsWithFolders(
   userId: string,
   range?: DateRange
 ): Promise<ItemWithFolder[]> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   let query = supabase
     .from("items")
     .select(`
@@ -233,12 +282,101 @@ export async function getItemsWithFolders(
   return rawData.map(mapItemWithFolder);
 }
 
+export type ItemsPageParams = {
+  userId: string;
+  range?: DateRange;
+  folderId?: string;
+  limit?: number;
+  cursor?: string | null;
+};
+
+export type ItemsPage = {
+  items: ItemWithFolder[];
+  nextCursor: string | null;
+};
+
+function encodeItemCursor(item: ItemWithFolder): string {
+  return `${item.date}|${item.created_at}|${item.id}`;
+}
+
+function decodeItemCursor(cursor: string): {
+  date: string;
+  createdAt: string;
+  id: string;
+} {
+  const [date, createdAt, id] = cursor.split("|");
+  return { date, createdAt, id };
+}
+
+export async function getItemsWithFoldersPageForUser({
+  userId,
+  range,
+  folderId,
+  limit = DEFAULT_PAGE_SIZE,
+  cursor,
+}: ItemsPageParams): Promise<ItemsPage> {
+  const supabase = createAdminClient();
+  const pageSize = Math.min(Math.max(limit, 1), 250);
+  let query = supabase
+    .from("items")
+    .select(`
+      *,
+      folders!inner (
+        name,
+        icon
+      )
+    `)
+    .eq("user_id", userId);
+
+  if (folderId) {
+    query = query.eq("folder_id", folderId);
+  }
+
+  if (range) {
+    query = query.gte("date", range.startDate).lte("date", range.endDate);
+  }
+
+  if (cursor) {
+    const decoded = decodeItemCursor(cursor);
+    query = query.or(
+      `date.lt.${decoded.date},and(date.eq.${decoded.date},created_at.lt.${decoded.createdAt}),and(date.eq.${decoded.date},created_at.eq.${decoded.createdAt},id.lt.${decoded.id})`
+    );
+  }
+
+  const { data, error } = await query
+    .order("date", { ascending: false })
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(pageSize + 1);
+
+  if (error) throw error;
+
+  const rawData = data as unknown as RawExpensiveItem[];
+  const mapped = (rawData ?? []).map(mapItemWithFolder);
+  const items = mapped.slice(0, pageSize);
+
+  return {
+    items,
+    nextCursor: mapped.length > pageSize ? encodeItemCursor(items[items.length - 1]) : null,
+  };
+}
+
+export async function getItemsWithFoldersPage({
+  range,
+  folderId,
+  limit,
+  cursor,
+}: Omit<ItemsPageParams, "userId">): Promise<ItemsPage> {
+  const { userId } = await getAuthenticatedUserId();
+  return getItemsWithFoldersPageForUser({ userId, range, folderId, limit, cursor });
+}
+
 export async function getReportItems(
   userId: string,
   range: DateRange,
   folderId?: string
 ): Promise<ItemWithFolder[]> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   let query = supabase
     .from("items")
     .select(`
@@ -269,6 +407,7 @@ export async function getReportItems(
 }
 
 interface RawMonthlySpendingItem {
+  folder_id?: string;
   total: number | string;
   folders: {
     id: string;
@@ -285,11 +424,12 @@ export async function getMonthlySpendingByFolder(
   userId: string,
   range: DateRange = getMonthRange()
 ): Promise<MonthlySpending[]> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
-    .from("items")
+    .from("expense_daily_folder_totals")
     .select(`
+      folder_id,
       total,
       folders!inner (
         id,
@@ -331,6 +471,7 @@ export async function getMonthlySpendingByFolder(
 }
 
 interface RawTrendItem {
+  folder_id?: string;
   total: number | string;
   date: string;
   folders: {
@@ -344,14 +485,15 @@ export async function getLast6MonthsTrend(
   userId: string,
   range: DateRange = getMonthRange()
 ): Promise<MonthlyTrend[]> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const rangeEnd = parseIsoDate(range.endDate);
   const sixMonthsAgo = new Date(rangeEnd.getFullYear(), rangeEnd.getMonth() - 5, 1);
   const startDate = sixMonthsAgo.toISOString().split("T")[0];
 
   const { data, error } = await supabase
-    .from("items")
+    .from("expense_daily_folder_totals")
     .select(`
+      folder_id,
       total,
       date,
       folders!inner (
@@ -446,7 +588,7 @@ export async function getTop5ExpensiveItems(
   userId: string,
   range?: DateRange
 ): Promise<ItemWithFolder[]> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   let query = supabase
     .from("items")
     .select(`

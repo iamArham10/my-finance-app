@@ -47,7 +47,7 @@ export function SavingsGoalsWidget() {
 
   const handleCreate = async (data: CreateSavingsGoalData) => {
     if (!userId) return;
-    await createSavingsGoal(userId, data);
+    await createSavingsGoal(data);
     toast.success("Goal created!");
     setShowForm(false);
     load(userId);

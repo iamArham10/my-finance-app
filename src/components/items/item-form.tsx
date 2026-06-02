@@ -22,7 +22,7 @@ import type { CreateItemData, Item } from "@/types";
 interface ItemFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: any) => Promise<void>;
+  onSubmit: (data: CreateItemData | Omit<CreateItemData, "folder_id">) => Promise<void>;
   initialData?: Item;
   defaultDate?: string;
   folders?: { id: string; name: string; icon?: string }[];
@@ -136,7 +136,7 @@ function ItemFormFields({
 
     setLoading(true);
     try {
-      const payload: any = {
+      const payload: CreateItemData | Omit<CreateItemData, "folder_id"> = {
         name: name.trim(),
         price: parsedPrice,
         quantity: parsedQuantity,
@@ -145,10 +145,7 @@ function ItemFormFields({
         note: note.trim() || undefined,
         tags: tags.length > 0 ? tags : undefined,
       };
-      if (folders) {
-        payload.folder_id = folderId;
-      }
-      await onSubmit(payload);
+      await onSubmit(folders ? { ...payload, folder_id: folderId } : payload);
       onOpenChange(false);
     } catch {
       setError("Failed to save item. Please try again.");

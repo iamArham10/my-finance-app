@@ -18,8 +18,6 @@ export function Sparkline({
     return data.map((val, i) => ({ index: i, value: val }));
   }, [data]);
 
-  const maxVal = Math.max(...data, 1); // Avoid 0 max
-
   return (
     <div className={className}>
       <ResponsiveContainer width="100%" height="100%">

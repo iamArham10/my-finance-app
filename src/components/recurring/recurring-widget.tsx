@@ -68,7 +68,7 @@ export function RecurringWidget({
 
   const handleCreate = async (data: CreateRecurringData) => {
     if (!userId) return;
-    await createRecurringTransaction(userId, data);
+    await createRecurringTransaction(data);
     toast.success("Recurring transaction created!");
     setShowForm(false);
     load(userId);
@@ -90,7 +90,7 @@ export function RecurringWidget({
     if (!userId) return;
     setProcessing(true);
     try {
-      const count = await processDueRecurring(userId);
+      const count = await processDueRecurring();
       if (count > 0) {
         toast.success(`Processed ${count} due transaction${count > 1 ? "s" : ""}`);
       } else {

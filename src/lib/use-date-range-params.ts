@@ -1,25 +1,26 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { getRangeFromSearch, getRangeSearch } from "@/lib/date-range";
 import type { DateRange } from "@/types";
 
 export function useDateRangeParams() {
-  const [range, setRangeState] = useState<DateRange>(() => getRangeFromSearch(""));
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+
+  const [range, setRangeState] = useState<DateRange>(() => getRangeFromSearch(searchParams.toString()));
 
   useEffect(() => {
-    const readRange = () => setRangeState(getRangeFromSearch(window.location.search));
-    readRange();
-    window.addEventListener("popstate", readRange);
-    return () => window.removeEventListener("popstate", readRange);
-  }, []);
+    setRangeState(getRangeFromSearch(searchParams.toString()));
+  }, [searchParams]);
 
   const setRange = useCallback((nextRange: DateRange) => {
     setRangeState(nextRange);
     const query = getRangeSearch(nextRange);
-    const nextUrl = `${window.location.pathname}?${query}`;
-    window.history.pushState(null, "", nextUrl);
-  }, []);
+    router.push(`${pathname}?${query}`);
+  }, [pathname, router]);
 
   return { range, setRange };
 }

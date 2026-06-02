@@ -39,20 +39,6 @@ export function KeyboardShortcutsProvider({ children }: { children: ReactNode })
   const router = useRouter();
 
   // Registry of all active shortcuts to display in the help modal
-  const [registry, setRegistry] = useState<ShortcutMapping[]>([]);
-
-  const registerGlobalShortcuts = useCallback((newShortcuts: ShortcutMapping[]) => {
-    setRegistry((prev) => {
-      const merged = [...prev];
-      for (const s of newShortcuts) {
-        if (!merged.find((m) => m.key === s.key && m.meta === s.meta && m.ctrl === s.ctrl)) {
-          merged.push(s);
-        }
-      }
-      return merged;
-    });
-  }, []);
-
   const defaultShortcuts: ShortcutMapping[] = useMemo(
     () => [
       {
@@ -97,13 +83,22 @@ export function KeyboardShortcutsProvider({ children }: { children: ReactNode })
     [router]
   );
 
+  const [registry, setRegistry] = useState<ShortcutMapping[]>(() => defaultShortcuts);
+
+  const registerGlobalShortcuts = useCallback((newShortcuts: ShortcutMapping[]) => {
+    setRegistry((prev) => {
+      const merged = [...prev];
+      for (const s of newShortcuts) {
+        if (!merged.find((m) => m.key === s.key && m.meta === s.meta && m.ctrl === s.ctrl)) {
+          merged.push(s);
+        }
+      }
+      return merged;
+    });
+  }, []);
+
   // Apply the default shortcuts
   useKeyboardShortcuts(defaultShortcuts);
-
-  // Sync defaults to registry once on mount
-  useMemo(() => {
-    setRegistry(defaultShortcuts);
-  }, [defaultShortcuts]);
 
   const value = {
     openHelp: () => setIsOpen(true),

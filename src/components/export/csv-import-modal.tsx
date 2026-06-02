@@ -17,6 +17,22 @@ interface CSVImportModalProps {
   onSuccess: () => void;
 }
 
+type ImportedItem = {
+  user_id: string;
+  folder_id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  unit: string;
+  total: number;
+  date: string;
+  note: string | null;
+};
+
+function isImportedItem(item: ImportedItem | null): item is ImportedItem {
+  return item !== null;
+}
+
 /** Simple regex-based CSV parser handling basic quoted fields. */
 function parseCSV(csv: string) {
   const lines = csv.split(/\r?\n/).filter(line => line.trim() !== "");
@@ -115,7 +131,7 @@ export function CSVImportModal({ open, onOpenChange, onSuccess }: CSVImportModal
       }
 
       // 2. Insert items
-      const itemsToInsert = parsed.data.map(row => {
+      const itemsToInsert = parsed.data.map((row): ImportedItem | null => {
         const folderId = folderMap.get(row.folder.toLowerCase());
         if (!folderId) return null;
 
@@ -142,7 +158,7 @@ export function CSVImportModal({ open, onOpenChange, onSuccess }: CSVImportModal
           date: date,
           note: row.note || null,
         };
-      }).filter(Boolean);
+      }).filter(isImportedItem);
 
       if (itemsToInsert.length === 0) {
         throw new Error("No valid rows found to import.");
@@ -150,16 +166,16 @@ export function CSVImportModal({ open, onOpenChange, onSuccess }: CSVImportModal
 
       const { error: insertError } = await supabase
         .from("items")
-        .insert(itemsToInsert as any[]);
+        .insert(itemsToInsert);
 
       if (insertError) throw insertError;
 
       toast.success(`Successfully imported ${itemsToInsert.length} items`);
       onSuccess();
       onOpenChange(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err.message || "Failed to process import");
+      setError(err instanceof Error ? err.message : "Failed to process import");
     } finally {
       setLoading(false);
       if (fileInputRef.current) {
